@@ -1,6 +1,10 @@
+#include <Geode/binding/FriendsProfilePage.hpp>
 #include <Geode/modify/MessagesProfilePage.hpp>
 #include <Geode/modify/FRequestProfilePage.hpp>
+#include <Geode/modify/FriendsProfilePage.hpp>
 #include <Geode/modify/ProfilePage.hpp>
+#include <Geode/modify/LevelCell.hpp>
+#include <Geode/modify/GJRequestCell.hpp>
 #include <Geode/Geode.hpp>
 #include "../include/ProfileOverhaulConstant.hpp"
 #include "../ProfilePopup.hpp"
@@ -30,6 +34,17 @@ class $modify(FRequestProfilePage) {
     }
 };
 
+class $modify(FriendsProfilePage) {
+    void onClose(CCObject* sender) {
+        if (!profile::onVanillaProfilePage) {
+            setKeypadEnabled(false);
+            removeFromParentAndCleanup(true);
+        } else {
+            FriendsProfilePage::onClose(sender);
+        }
+    }
+};
+
 class $modify(ProfilePage) {
     void loadPageFromUserInfo(GJUserScore* score) {
         auto bottomMenu = typeinfo_cast<CCMenu*>(m_mainLayer->getChildByIDRecursive("bottom-menu"));
@@ -42,5 +57,17 @@ class $modify(ProfilePage) {
             bottomMenu->updateLayout();
         }
         ProfilePage::loadPageFromUserInfo(score);
+    }
+};
+
+class $modify(LevelCell) {
+    void onViewProfile(CCObject* sender) {
+        ProfilePopup::create(this->m_level->m_accountID, false)->show();
+    }
+};
+
+class $modify(GJRequestCell) {
+    void onViewProfile(CCObject* sender) {
+        ProfilePopup::create(m_score->m_accountID, false)->show();
     }
 };
