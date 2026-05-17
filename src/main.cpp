@@ -6,6 +6,6 @@ using namespace geode::prelude;
 
 class $modify(MenuLayer) {
     void onMyProfile(CCObject*) {
-        ProfilePopup::create(7689052, false)->show();
+        ProfilePopup::create(7689052, true)->show();
     }
 };

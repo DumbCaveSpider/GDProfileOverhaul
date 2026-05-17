@@ -13,5 +13,12 @@
 	"description": "Changes the entire Profile Page",
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3"
+	},
+	"resources": {
+		"spritesheets": {
+			"PO-Sheet":[
+				"resources/*.png"
+			]
+		}
 	}
 }

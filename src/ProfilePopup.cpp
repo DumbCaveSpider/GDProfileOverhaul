@@ -1,13 +1,20 @@
 #include <Geode/Geode.hpp>
+#include <Geode/binding/CCSpriteGrayscale.hpp>
+#include <Geode/binding/GJAccountManager.hpp>
 #include <Geode/binding/GJUserScore.hpp>
+#include <Geode/binding/MessagesProfilePage.hpp>
+#include <Geode/binding/ProfilePage.hpp>
+#include <Geode/binding/CommentCell.hpp>
 #include "ProfilePopup.hpp"
+#include <fmt/format.h>
 #include <cue/ListBorder.hpp>
 #include <cue/ListNode.hpp>
 #include <cue/PlayerIcon.hpp>
-#include "Geode/cocos/cocoa/CCGeometry.h"
-#include "Geode/cocos/layers_scenes_transitions_nodes/CCLayer.h"
+#include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/NineSlice.hpp"
+#include "Geode/ui/Button.hpp"
+#include "include/ProfileOverhaulConstant.hpp"
 
 using namespace geode::prelude;
 
@@ -21,23 +28,56 @@ ProfilePopup* ProfilePopup::create(int accountId, bool ownProfile) {
     return nullptr;
 }
 
+ProfilePopup::~ProfilePopup() {
+    auto glm = GameLevelManager::get();
+    if (glm) {
+        if (glm->m_userInfoDelegate == this) {
+            glm->m_userInfoDelegate = nullptr;
+        }
+        if (glm->m_levelCommentDelegate == this) {
+            glm->m_levelCommentDelegate = nullptr;
+        }
+    }
+    if (m_profilePopup == this) {
+        m_profilePopup = nullptr;
+    }
+}
+
 bool ProfilePopup::init(int accountId, bool ownProfile) {
     if (!Popup::init(440.f, 290.f)) {
         return false;
     }
 
+    m_profilePopup = Ref<ProfilePopup>(this);
+    profile::onVanillaProfilePage = false;
+
+    // check if is actually your own profile
+    if (ownProfile) {
+        auto currentUserId = GJAccountManager::get()->m_accountID;
+        if (currentUserId != accountId) {
+            log::debug("ProfilePopup was initialized with ownProfile=true but accountId {} does not match current user id {}", accountId, currentUserId);
+            ownProfile = false;
+        }
+    }
+
+    m_ownProfile = ownProfile;
+    m_accountId = accountId;
+
     // i hate these stuff
     m_noElasticity = true;
-    if (m_buttonMenu) m_buttonMenu->removeMeAndCleanup();
+    if (m_buttonMenu) m_buttonMenu->removeAllChildren();
 
     m_score = nullptr;
 
-    // get the user's score info
+    // get the user's score info and account comments
     auto glm = GameLevelManager::get();
-    glm->m_userInfoDelegate = this;
-    glm->getGJUserInfo(accountId);
-
-    m_score = glm->userInfoForAccountID(accountId);
+    if (glm) {
+        glm->m_userInfoDelegate = this;
+        glm->m_levelCommentDelegate = this;
+        glm->getGJUserInfo(accountId);
+        glm->getAccountComments(accountId, 0, 10);
+        m_score = glm->userInfoForAccountID(accountId);
+    }
 
     // left side panel
     m_closeMenu = CCMenu::create();
@@ -60,7 +100,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_userOptionsMenu->setContentSize({35, 135});
     m_userOptionsMenu->setID("user-options-menu");
     m_userOptionsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_userOptionsMenu->setLayout(ColumnLayout::create());
+    m_userOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false));
     m_userOptionsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_userOptionsMenu, Anchor::Left, {30.f, 20.f}, {0.5, 0.5}, false);
 
@@ -73,7 +113,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_otherOptionsMenu->setContentSize({35, 70});
     m_otherOptionsMenu->setID("other-options-menu");
     m_otherOptionsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_otherOptionsMenu->setLayout(ColumnLayout::create());
+    m_otherOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false));
     m_otherOptionsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_otherOptionsMenu, Anchor::BottomLeft, {30.f, 50.f}, {0.5, 0.5}, false);
 
@@ -87,7 +127,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_usernameMenu->setContentSize({270, 25});
     m_usernameMenu->setID("username-menu");
     m_usernameMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_usernameMenu->setZOrder(1);
+    m_usernameMenu->setZOrder(2);
     m_usernameMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setCrossAxisOverflow(false)->setAutoScale(false));
     m_mainLayer->addChildAtPosition(m_usernameMenu, Anchor::Top, {-25.f, -25.f}, {0.5, 0.5}, false);
 
@@ -95,36 +135,33 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_statsMenu->setContentSize({270, 15});
     m_statsMenu->setID("stats-menu");
     m_statsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_statsMenu->setZOrder(1);
+    m_statsMenu->setZOrder(2);
     m_statsMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setGap(2.5f)->setCrossAxisOverflow(false)->setAutoScale(false));
-    m_mainLayer->addChildAtPosition(m_statsMenu, Anchor::Top, {-25.f, -50.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_statsMenu, Anchor::Top, {-25.f, -45.f}, {0.5, 0.5}, false);
 
     m_iconsMenu = CCMenu::create();
     m_iconsMenu->setContentSize({315, 45});
     m_iconsMenu->setID("icons-menu");
     m_iconsMenu->setZOrder(1);
     m_iconsMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Center)->setGap(10.f)->setCrossAxisOverflow(false)->setAutoScale(true));
-    m_mainLayer->addChildAtPosition(m_iconsMenu, Anchor::Center, {0.f, 55.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_iconsMenu, Anchor::Center, {0.f, 65.f}, {0.5, 0.5}, false);
 
     auto iconsMenuBorder = cue::ListBorder::create(cue::ListBorderStyle::Comments, {325, 45}, ccColor4B{191, 114, 62, 255});
     iconsMenuBorder->m_bIgnoreAnchorPointForPosition = false;
     iconsMenuBorder->setZOrder(2);
-    m_mainLayer->addChildAtPosition(iconsMenuBorder, Anchor::Center, {0.f, 55.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(iconsMenuBorder, Anchor::Center, {0.f, 65.f}, {0.5, 0.5}, false);
 
     auto iconsMenuBg = CCLayerColor::create({191, 114, 62, 255}, iconsMenuBorder->getContentSize().width, iconsMenuBorder->getContentSize().height);
     iconsMenuBg->m_bIgnoreAnchorPointForPosition = false;
     iconsMenuBg->setZOrder(0);
-    m_mainLayer->addChildAtPosition(iconsMenuBg, Anchor::Center, {0.f, 55.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(iconsMenuBg, Anchor::Center, {0.f, 65.f}, {0.5, 0.5}, false);
 
-    m_commentsList = cue::ListNode::create({325, 70}, {191, 114, 62, 255}, cue::ListBorderStyle::Comments);
+    m_commentsList = cue::ListNode::create({325, 85}, {191, 114, 62, 255}, cue::ListBorderStyle::Comments);
     m_commentsList->setID("comments-list");
     m_commentsList->setZOrder(1);
-    m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -20.f}, {0.5, 0.5}, false);
-
-    auto commentsListBg = CCLayerColor::create({191, 114, 62, 255}, m_commentsList->getContentSize().width, m_commentsList->getContentSize().height);
-    commentsListBg->m_bIgnoreAnchorPointForPosition = false;
-    commentsListBg->setZOrder(-1);
-    m_commentsList->addChildAtPosition(commentsListBg, Anchor::Center, {0.f, 0.f}, {0.5, 0.5}, false);
+    m_commentsList->setCellHeight(85.f);
+    m_commentsList->setAutoUpdate(true);
+    m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -10.f}, {0.5, 0.5}, false);
 
     // right side panel
     m_refrshMenu = CCMenu::create();
@@ -171,12 +208,19 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
 
 void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
     m_score = score;
+    if (!Ref<ProfilePopup>(this)) return;
+    if (!m_usernameMenu || !m_statsMenu || !m_iconsMenu) return;
+
     if (m_score) {
         log::info("async user score received: username={}, stars={}, demons={}, creator points={}", m_score->m_userName, m_score->m_stars, m_score->m_demons, m_score->m_creatorPoints);
         // TODO: refresh UI elements that depend on m_score here
         auto usernameLabel = CCLabelBMFont::create(m_score->m_userName.c_str(), "bigFont.fnt");
         usernameLabel->setScale(0.8f);
         m_usernameMenu->addChild(usernameLabel);
+
+        auto infoSpr = CCSpriteGrayscale::createWithSpriteFrameName("GJ_infoIcon_001.png");
+        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(ProfilePopup::onInfo));
+        m_buttonMenu->addChildAtPosition(infoBtn, Anchor::TopRight, {-5.f, -5.f}, {0.5f, 0.5f}, false);
 
         m_usernameMenu->updateLayout();
 
@@ -232,6 +276,16 @@ void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
         userCoinsIcon->setScale(0.5f);
         m_statsMenu->addChild(userCoinsIcon);
 
+        // secret coins
+        auto secretCoinsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_secretCoins).c_str(), "bigFont.fnt");
+        secretCoinsLabel->setScale(0.4f);
+        secretCoinsLabel->setColor({248, 138, 0});
+        m_statsMenu->addChild(secretCoinsLabel);
+
+        auto secretCoinsIcon = CCSprite::createWithSpriteFrameName("GJ_coinsIcon_001.png");
+        secretCoinsIcon->setScale(0.5f);
+        m_statsMenu->addChild(secretCoinsIcon);
+
         m_statsMenu->updateLayout();
 
         // icons
@@ -260,11 +314,123 @@ void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
         m_iconsMenu->addChild(playerObject(IconType::Jetpack, m_score->m_playerJetpack));
 
         m_iconsMenu->updateLayout();
+
+        // left panel
+        if (m_ownProfile) {
+            auto accountSettingsBtn = Button::createWithSpriteFrameName("accountBtn_settings_001.png", [this](geode::Button* sender) {
+                GJAccountSettingsLayer::create(m_score->m_accountID)->show();
+            });
+            m_userOptionsMenu->addChild(accountSettingsBtn);
+
+            auto frienRequestsBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
+                FRequestProfilePage::create(false)->show();
+            });
+            m_userOptionsMenu->addChild(frienRequestsBtn);
+
+            // @geode-ignore(unknown-resource)
+            auto shareCommentBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/message.png"), [this](geode::Button* sender) {
+                if (m_score) {
+                    ShareCommentLayer::create("Post Account Update", 140, CommentType::Account, m_score->m_accountID, "")->show();
+                }
+            });
+            m_userOptionsMenu->addChild(shareCommentBtn);
+        }
+
+        auto oldProfileBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("PO-icon-person.png"_spr), [this](geode::Button* sender) {
+            onClose(sender);
+            profile::onVanillaProfilePage = true;
+            ProfilePage::create(m_score->m_accountID, m_ownProfile)->show();
+        });
+        m_userOptionsMenu->addChild(oldProfileBtn);
+
+        auto messageBtn = Button::createWithSpriteFrameName("accountBtn_messages_001.png", [this](geode::Button* sender) {
+            if (m_score) {
+                MessagesProfilePage::create(false)->show();
+            }
+        });
+
+        m_userOptionsMenu->addChild(messageBtn);
+        m_userOptionsMenu->updateLayout();
     }
 }
 
+// profile page own implemetation
+void ProfilePopup::onInfo(CCObject* sender) {
+    if (!m_score) {
+        return;
+    }
+
+    auto message = fmt::format(
+        "<cl>Account ID:</c> {}\n<cy>Stars:</c> {}\n<cb>Moons:</c> {}\n<cf>Diamonds:</c> {}\n<co>Secret Coins:</c> {}\n<cc>User Coins:</c> {}\n<cr>Demons:</c> {}",
+        m_score->m_accountID,
+        m_score->m_stars,
+        m_score->m_moons,
+        m_score->m_diamonds,
+        m_score->m_secretCoins,
+        m_score->m_userCoins,
+        m_score->m_demons);
+
+    if (m_score->m_creatorPoints > 0) {
+        message += fmt::format("\n<cg>Creator Points:</c> {}", m_score->m_creatorPoints);
+    }
+
+    FLAlertLayer::create(m_score->m_userName.c_str(), std::string(message), "OK")->show();
+}
+
+// gjuserinfo delegate
 void ProfilePopup::getUserInfoFailed(int id) {
     log::error("user info request failed for account id {}", id);
+}
+
+void ProfilePopup::loadCommentsFinished(cocos2d::CCArray* comments, char const* key) {
+    if (!comments || !m_commentsList || !key) {
+        return;
+    }
+
+    log::debug("comments {}", comments);
+
+    // auto glm = GameLevelManager::get();
+    // if (!glm || glm->typeFromCommentKey(key) != CommentType::Account) {
+    //     return;
+    // }
+
+    m_commentsList->clear();
+    const auto width = m_commentsList->getListSize().width;
+
+    for (auto i = 0u; i < comments->count(); ++i) {
+        auto commentObj = comments->objectAtIndex(i);
+        if (!commentObj) {
+            continue;
+        }
+
+        GJComment* comment = nullptr;
+        if (auto dict = typeinfo_cast<cocos2d::CCDictionary*>(commentObj)) {
+            comment = GJComment::create(dict);
+        } else {
+            comment = static_cast<GJComment*>(commentObj);
+        }
+
+        if (!comment) {
+            continue;
+        }
+
+        auto cell = new CommentCell("commentCell", width, 85.f);
+        if (!cell) {
+            continue;
+        }
+        cell->autorelease();
+        cell->setContentHeight(85);
+        cell->loadFromComment(comment);
+        cell->m_backgroundLayer->setOpacity(0);
+        cell->m_accountComment = true;
+        m_commentsList->addCell(cell);
+    }
+
+    m_commentsList->updateLayout();
+}
+
+void ProfilePopup::loadCommentsFailed(char const* key) {
+    log::error("account comments load failed for key {}", key ? key : "<null>");
 }
 
 void ProfilePopup::userInfoChanged(GJUserScore* score) {
