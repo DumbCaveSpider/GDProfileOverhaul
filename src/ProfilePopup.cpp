@@ -165,10 +165,20 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
 
     m_commentsList = cue::ListNode::create({325, 85}, {191, 114, 62, 255}, cue::ListBorderStyle::Comments);
     m_commentsList->setID("comments-list");
-    m_commentsList->setZOrder(1);
+    m_commentsList->setZOrder(2);
     m_commentsList->setCellHeight(85.f);
     m_commentsList->setAutoUpdate(true);
     m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -10.f}, {0.5, 0.5}, false);
+
+    m_ratedLevelCell = cue::ListBorder::create(cue::ListBorderStyle::Comments, {325, 50}, ccColor4B{191, 114, 62, 255});
+    m_ratedLevelCell->setID("rated-level-cell");
+    m_ratedLevelCell->setZOrder(2);
+    m_mainLayer->addChildAtPosition(m_ratedLevelCell, Anchor::Center, {0.f, -85.f}, {0.5, 0.5}, false);
+
+    auto levelCellBg = CCLayerColor::create({191, 114, 62, 255}, iconsMenuBorder->getContentSize().width, iconsMenuBorder->getContentSize().height);
+    levelCellBg->m_bIgnoreAnchorPointForPosition = false;
+    levelCellBg->setZOrder(0);
+    m_mainLayer->addChildAtPosition(levelCellBg, Anchor::Center, {0.f, -85.f}, {0.5, 0.5}, false);
 
     // right side panel
     m_refreshMenu = CCMenu::create();
@@ -388,7 +398,7 @@ void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
                                     "- <cy>View your profile</c>\n"
                                     "- <cl>Send messages</c>\n"
                                     "- <cp>Send friend requests</c>\n"
-                                    "- <cr>Messages from this user will be removed",
+                                    "- <cr>Messages from this user will be removed</c>",
                             m_score->m_userName,
                             m_score->m_userName),
                         "Back",
@@ -589,9 +599,9 @@ void ProfilePopup::shareCommentClosed(gd::string text, ShareCommentLayer* layer)
     if (!Ref<ProfilePopup>(this) || !m_commentsList || !layer) {
         return;
     }
-    if (layer->m_commentType != CommentType::Account) {
-        return;
-    }
+    // if (layer->m_commentType != CommentType::Account) {
+    //     return;
+    // }
 
     log::info("share comment closed, refreshing comment list");
     m_commentsList->clear();
