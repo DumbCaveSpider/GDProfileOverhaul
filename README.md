@@ -19,6 +19,7 @@ This is a complete <cg>**recreation**</c> of the profile page and does not **<co
 - <cg>**Complete Redesign**</c>: A new design for the profile page, with a more modern and clean look.
 - <cl>**Friend Name Notes**</c>: Add custom notes to your friends' names.
 - <cp>**Profile Bio**</c>: Description of someone's profile, better way to tell multiple accounts apart.
+- **<cy>Rated Level Display</c>**: Displays the rated level of the profile, if they have one.
 
 ---
 

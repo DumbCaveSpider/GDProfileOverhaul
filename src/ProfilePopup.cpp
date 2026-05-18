@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/binding/CCSpriteGrayscale.hpp>
+#include <Geode/binding/FLAlertLayer.hpp>
 #include <Geode/binding/FriendRequestPopup.hpp>
 #include <Geode/binding/GJAccountManager.hpp>
 #include <Geode/binding/GJUserScore.hpp>
@@ -9,6 +10,7 @@
 #include <Geode/binding/ShareCommentDelegate.hpp>
 #include <Geode/binding/ShareCommentLayer.hpp>
 #include <Geode/binding/CommentCell.hpp>
+#include <Geode/binding/LevelCell.hpp>
 #include "ProfilePopup.hpp"
 #include <fmt/format.h>
 #include <cue/ListBorder.hpp>
@@ -22,6 +24,7 @@
 #include "Geode/ui/Button.hpp"
 #include "Geode/ui/Popup.hpp"
 #include "Geode/utils/general.hpp"
+#include "Geode/utils/web.hpp"
 #include "include/ProfileOverhaulConstant.hpp"
 
 using namespace geode::prelude;
@@ -48,6 +51,11 @@ ProfilePopup::~ProfilePopup() {
     }
     if (m_profilePopup == this) {
         m_profilePopup = nullptr;
+    }
+
+    if (m_levelCell) {
+        m_levelCell->removeAllChildrenWithCleanup(true);
+        m_levelCell = nullptr;
     }
 }
 
@@ -132,13 +140,22 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     otherOptionsMenuBg->setOpacity(100);
     m_mainLayer->addChildAtPosition(otherOptionsMenuBg, Anchor::BottomLeft, {30.f, 50.f}, {0.5, 0.5}, false);
 
+    // leaderboard menu
+    m_leaderboardMenu = CCMenu::create();
+    m_leaderboardMenu->setContentSize({50, 35});
+    m_leaderboardMenu->setID("leaderboard-menu");
+    m_leaderboardMenu->m_bIgnoreAnchorPointForPosition = false;
+    m_leaderboardMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAutoScale(true)->setAxisReverse(true));
+    m_leaderboardMenu->setZOrder(1);
+    m_mainLayer->addChildAtPosition(m_leaderboardMenu, Anchor::TopRight, {-90.f, -30.f}, {0.5, 0.5}, false);
+
     // center panel
     m_usernameMenu = CCMenu::create();
     m_usernameMenu->setContentSize({270, 25});
     m_usernameMenu->setID("username-menu");
     m_usernameMenu->m_bIgnoreAnchorPointForPosition = false;
     m_usernameMenu->setZOrder(5);
-    m_usernameMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setCrossAxisOverflow(false)->setAutoScale(false));
+    m_usernameMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setCrossAxisOverflow(false)->setAutoScale(true));
     m_mainLayer->addChildAtPosition(m_usernameMenu, Anchor::Top, {-25.f, -25.f}, {0.5, 0.5}, false);
 
     m_statsMenu = CCMenu::create();
@@ -146,8 +163,9 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_statsMenu->setID("stats-menu");
     m_statsMenu->m_bIgnoreAnchorPointForPosition = false;
     m_statsMenu->setZOrder(5);
+    m_statsMenu->setScale(0.8f);
     m_statsMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setGap(2.5f)->setCrossAxisOverflow(false)->setAutoScale(false));
-    m_mainLayer->addChildAtPosition(m_statsMenu, Anchor::Top, {-25.f, -45.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_statsMenu, Anchor::Top, {-55.f, -45.f}, {0.5, 0.5}, false);
 
     m_iconsMenu = CCMenu::create();
     m_iconsMenu->setContentSize({315, 45});
@@ -173,9 +191,10 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_commentsList->setAutoUpdate(true);
     m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -10.f}, {0.5, 0.5}, false);
 
-    m_ratedLevelCell = cue::ListBorder::create(cue::ListBorderStyle::Comments, {325, 50}, ccColor4B{191, 114, 62, 255});
+    m_ratedLevelCell = cue::ListNode::create({325, 50}, ccColor4B{191, 114, 62, 255}, cue::ListBorderStyle::Comments);
     m_ratedLevelCell->setID("rated-level-cell");
     m_ratedLevelCell->setZOrder(2);
+    m_ratedLevelCell->getScrollLayer()->m_disableMovement = true;
     m_mainLayer->addChildAtPosition(m_ratedLevelCell, Anchor::Center, {0.f, -85.f}, {0.5, 0.5}, false);
 
     auto levelCellBg = CCLayerColor::create({191, 114, 62, 255}, m_ratedLevelCell->getContentSize().width, m_ratedLevelCell->getContentSize().height);
@@ -201,7 +220,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_socialsMenu->setContentSize({35, 135});
     m_socialsMenu->setID("socials-menu");
     m_socialsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_socialsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false));
+    m_socialsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true));
     m_socialsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_socialsMenu, Anchor::Right, {-30.f, 20.f}, {0.5, 0.5}, false);
 
@@ -242,6 +261,7 @@ void ProfilePopup::refreshUserInfoUI() {
     m_userOptionsMenu->removeAllChildren();
     m_onlineMenu->removeAllChildren();
     m_otherOptionsMenu->removeAllChildren();
+    m_socialsMenu->removeAllChildren();
 
     if (m_buttonMenu) m_buttonMenu->removeAllChildren();
     if (!m_score) {
@@ -252,19 +272,74 @@ void ProfilePopup::refreshUserInfoUI() {
         m_userOptionsMenu->updateLayout();
         m_onlineMenu->updateLayout();
         m_otherOptionsMenu->updateLayout();
+        m_socialsMenu->updateLayout();
         return;
     }
 
+    if (m_levelCell) {
+        m_levelCell->removeFromParent();
+        m_levelCell = nullptr;
+    }
+
     log::info("refresh user score UI: username={}, stars={}, demons={}, creator points={}", m_score->m_userName, m_score->m_stars, m_score->m_demons, m_score->m_creatorPoints);
-
-    auto usernameLabel = CCLabelBMFont::create(m_score->m_userName.c_str(), "bigFont.fnt");
-    usernameLabel->setScale(0.8f);
-    m_usernameMenu->addChild(usernameLabel);
-
     auto infoSpr = CCSpriteGrayscale::createWithSpriteFrameName("GJ_infoIcon_001.png");
     auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(ProfilePopup::onInfo));
     if (m_buttonMenu) m_buttonMenu->addChildAtPosition(infoBtn, Anchor::TopRight, {-5.f, -5.f}, {0.5f, 0.5f}, false);
 
+    auto usernameLabel = Button::createWithLabel(m_score->m_userName.c_str(), "bigFont.fnt", [this](geode::Button* sender) {
+        Notification::create("Username Copied to Clipboard", NotificationIcon::Info, 1.5f)->show();
+        geode::utils::clipboard::write(m_score->m_userName);
+    });
+    usernameLabel->setScale(0.8f);
+    usernameLabel->setAnchorPoint({0.f, 0.5f});
+    usernameLabel->setScaleMultiplier(1.05f);
+    m_usernameMenu->addChild(usernameLabel);
+
+    if (m_score->m_modBadge == 1)  // normal moderator
+    {
+        auto modBadge = Button::createWithSpriteFrameName("modBadge_01_001.png", [this](geode::Button* sender) {
+            FLAlertLayer::create(
+                "Moderator",
+                "<cy>Moderator</c> can suggest levels to <cf>RobTop</c> for rating and hold higher priority when suggesting Demon difficulty ratings.\n"
+                "<cy>Moderator</c> comments are highlighted in <cg>light green</c>",
+                "OK")
+                ->show();
+        });
+        m_usernameMenu->addChild(modBadge);
+    } else if (m_score->m_modBadge == 2)  // super moderator
+    {
+        auto modBadge = Button::createWithSpriteFrameName("modBadge_02_001.png", [this](geode::Button* sender) {
+            if (m_score->m_accountID == 71) {
+                FLAlertLayer::create(
+                    "Developer",
+                    "<cf>Developer</c> holds <cg>all moderator abilities</c>.\n"
+                    "<cf>Developer</c> comments are highlighted in <cf>cyan</c>, though the <cg>elder moderator badge remains visible</c>\n"
+                    "<cy>This moderation status is only applied to RobTop.</c>",
+                    "OK")
+                    ->show();
+            } else {
+                FLAlertLayer::create(
+                    "Elder Moderator",
+                    "<cg>Elder Moderators</c> hold all <co>moderator abilities</c>, with the additional ability to <cr>delete comments</c>, issue temporary <cr>comment bans</c>, remove <cy>unrated user levels</c> from the server, and <cc>whitelist scouted Newgrounds artists</c>.\n"
+                    "<cg>Elder Moderator</c> comments are highlighted in <cg>dark green</c>",
+                    "OK")
+                    ->show();
+            }
+        });
+        m_usernameMenu->addChild(modBadge);
+    } else if (m_score->m_modBadge == 3)  // trial moderator
+    {
+        auto modBadge = Button::createWithSpriteFrameName("modBadge_03_001.png", [this](geode::Button* sender) {
+            FLAlertLayer::create(
+                "Leaderboard Moderator",
+                "<cl>Leaderboard Moderators</c> monitor <cg>global</c> and <co>level-specific</c> leaderboards for <cr>illegitimate submissions</c> and manage player <cg>whitelisting for the global Top 1,000</c>.\n"
+                "They hold a <cg>higher priority</c> when suggesting <cr>Demon difficulty ratings</c>.\n"
+                "<cy>The role was first assigned in Update 2.11 and formally included in Update 2.2.</c>",
+                "OK")
+                ->show();
+        });
+        m_usernameMenu->addChild(modBadge);
+    }
     m_usernameMenu->updateLayout();
 
     auto starsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_stars).c_str(), "bigFont.fnt");
@@ -329,6 +404,17 @@ void ProfilePopup::refreshUserInfoUI() {
     secretCoinsIcon->setScale(0.5f);
     m_statsMenu->addChild(secretCoinsIcon);
 
+    if (Mod::get()->getSettingValue<bool>("showDiamondStats")) {
+        auto diamondsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_diamonds).c_str(), "bigFont.fnt");
+        diamondsLabel->setScale(0.4f);
+        diamondsLabel->setColor({0, 255, 255});
+        m_statsMenu->addChild(diamondsLabel);
+
+        auto diamondsIcon = CCSprite::createWithSpriteFrameName("GJ_diamondsIcon_001.png");
+        diamondsIcon->setScale(0.5f);
+        m_statsMenu->addChild(diamondsIcon);
+    }
+
     m_statsMenu->updateLayout();
 
     auto playerObject = [&](IconType iconType, int playerType) {
@@ -383,6 +469,32 @@ void ProfilePopup::refreshUserInfoUI() {
         });
         m_userOptionsMenu->addChild(friendRequestsBtn);
 
+        // number of friend request
+        if (m_score->m_friendReqCount > 0 && m_score->isCurrentUser()) {
+            // @geode-ignore(unknown-resource)
+            auto reqBadge = CCSprite::createWithSpriteFrameName("geode.loader/updates-failed.png");
+            reqBadge->setScale(0.8f);
+            reqBadge->setPosition({friendRequestsBtn->getContentSize().width - 5.f, friendRequestsBtn->getContentSize().height - 5.f});
+            friendRequestsBtn->addChild(reqBadge);
+            auto reqCountLabel = CCLabelBMFont::create(numToString(m_score->m_friendReqCount).c_str(), "bigFont.fnt");
+            reqCountLabel->limitLabelWidth(reqBadge->getContentWidth(), .6f, 0.1f);
+            reqCountLabel->setPosition({reqBadge->getContentSize().width / 2.f, reqBadge->getContentSize().height / 2.f});
+            reqBadge->addChild(reqCountLabel);
+        }
+
+        // new friends!
+        if (m_score->m_newFriendCount > 0 && m_score->isCurrentUser()) {
+            // @geode-ignore(unknown-resource)
+            auto newFriendBadge = CCSprite::createWithSpriteFrameName("geode.loader/updates-installed.png");
+            newFriendBadge->setPosition({friendListBtn->getContentSize().width - 5.f, friendListBtn->getContentSize().height - 5.f});
+            newFriendBadge->setScale(0.8f);
+            friendListBtn->addChild(newFriendBadge);
+            auto newFriendCountLabel = CCLabelBMFont::create(numToString(m_score->m_newFriendCount).c_str(), "bigFont.fnt");
+            newFriendCountLabel->limitLabelWidth(newFriendBadge->getContentWidth(), .6f, 0.1f);
+            newFriendCountLabel->setPosition({newFriendBadge->getContentSize().width / 2.f, newFriendBadge->getContentSize().height / 2.f});
+            newFriendBadge->addChild(newFriendCountLabel);
+        }
+
         auto messageBtn = Button::createWithSpriteFrameName("accountBtn_messages_001.png", [this](geode::Button* sender) {
             if (m_score) {
                 if (m_ownProfile) {
@@ -394,6 +506,20 @@ void ProfilePopup::refreshUserInfoUI() {
         });
         m_userOptionsMenu->addChild(messageBtn);
 
+        // unread messages
+        if (m_score->m_newMsgCount > 0 && m_score->isCurrentUser()) {
+            // @geode-ignore(unknown-resource)
+            auto msgBadge = CCSprite::createWithSpriteFrameName("geode.loader/updates-available.png");
+            msgBadge->setScale(0.8f);
+            msgBadge->setPosition({messageBtn->getContentSize().width - 5.f, messageBtn->getContentSize().height - 5.f});
+            messageBtn->addChild(msgBadge);
+            auto msgCountLabel = CCLabelBMFont::create(numToString(m_score->m_newMsgCount).c_str(), "bigFont.fnt");
+            msgCountLabel->limitLabelWidth(msgBadge->getContentWidth(), .6f, 0.1f);
+            msgCountLabel->setPosition({msgBadge->getContentSize().width / 2.f, msgBadge->getContentSize().height / 2.f});
+            msgBadge->addChild(msgCountLabel);
+        }
+
+        // @geode-ignore(unknown-resource)
         auto shareCommentBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/message.png"), [this](geode::Button* sender) {
             if (m_score) {
                 if (auto layer = ShareCommentLayer::create("Post Account Update", 140, CommentType::Account, m_score->m_accountID, "")) {
@@ -533,6 +659,44 @@ void ProfilePopup::refreshUserInfoUI() {
         m_otherOptionsMenu->updateLayout();
     }
 
+    // middle right menu
+    if (m_score->m_youtubeURL.size() > 0) {
+        auto youtubeBtn = Button::createWithSpriteFrameName("gj_ytIcon_001.png", [this](geode::Button* sender) {
+            utils::web::openLinkInBrowser(std::string("https://youtube.com/") + m_score->m_youtubeURL);
+        });
+        m_socialsMenu->addChild(youtubeBtn);
+    }
+
+    if (m_score->m_twitterURL.size() > 0) {
+        auto twitterBtn = Button::createWithSpriteFrameName("gj_twIcon_001.png", [this](geode::Button* sender) {
+            utils::web::openLinkInBrowser(std::string("https://twitter.com/") + m_score->m_twitterURL);
+        });
+        m_socialsMenu->addChild(twitterBtn);
+    }
+
+    if (m_score->m_twitchURL.size() > 0) {
+        auto twitchBtn = Button::createWithSpriteFrameName("gj_twitchIcon_001.png", [this](geode::Button* sender) {
+            utils::web::openLinkInBrowser(std::string("https://twitch.tv/") + m_score->m_twitchURL);
+        });
+        m_socialsMenu->addChild(twitchBtn);
+    }
+
+    if (m_score->m_instagramURL.size() > 0) {
+        auto instagramBtn = Button::createWithSpriteFrameName("gj_instaIcon_001.png", [this](geode::Button* sender) {
+            utils::web::openLinkInBrowser(std::string("https://instagram.com/") + m_score->m_instagramURL);
+        });
+        m_socialsMenu->addChild(instagramBtn);
+    }
+
+    if (m_score->m_tiktokURL.size() > 0) {
+        auto tiktokBtn = Button::createWithSpriteFrameName("gj_tiktokIcon_001.png", [this](geode::Button* sender) {
+            utils::web::openLinkInBrowser(std::string("https://tiktok.com/@") + m_score->m_tiktokURL);
+        });
+        m_socialsMenu->addChild(tiktokBtn);
+    }
+
+    m_socialsMenu->updateLayout();
+
     // bottom right menu
     auto listAccountBtn = Button::createWithSpriteFrameName("accountBtn_myLists_001.png", [this](geode::Button* sender) {
         onList(sender);
@@ -545,6 +709,143 @@ void ProfilePopup::refreshUserInfoUI() {
     m_onlineMenu->addChild(myLevelBtn);
 
     m_onlineMenu->updateLayout();
+
+    // leaderboard stats
+    log::debug("player rank is {}", m_score->m_playerRank);
+    log::debug("stars rank is {}", m_score->m_globalRank);
+    //log::debug("moon stuff {}", GameLevelManager::get()->getLeaderboardScore(LeaderboardType::Global, LeaderboardStat::Moons));
+    if (m_score->m_globalRank > 0) {
+        auto starsLeaderboardBtn = Button::createWithLabel(fmt::format("Stars Rank:\n{}", m_score->m_globalRank), "chatFont.fnt", [this](geode::Button* sender) {
+            m_score->m_leaderboardStat = LeaderboardStat::Stars;
+            auto scene = CCScene::create();
+            auto layer = LeaderboardsLayer::create(LeaderboardType::Global, m_score->m_leaderboardStat);
+            scene->addChild(layer);
+            CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
+        });
+        starsLeaderboardBtn->setColor({233, 253, 113});
+
+        auto moonsLeaderboardBtn = Button::createWithLabel(fmt::format("Moons Rank:\n{}", m_score->m_globalRank), "chatFont.fnt", [this](geode::Button* sender) {
+            m_score->m_leaderboardStat = LeaderboardStat::Moons;
+            auto scene = CCScene::create();
+            auto layer = LeaderboardsLayer::create(LeaderboardType::Global, m_score->m_leaderboardStat);
+            scene->addChild(layer);
+            CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
+        });
+        moonsLeaderboardBtn->setColor({109, 215, 249});
+        m_leaderboardMenu->addChild(starsLeaderboardBtn);
+        m_leaderboardMenu->addChild(moonsLeaderboardBtn);
+    }
+    m_leaderboardMenu->updateLayout();
+
+    refreshRatedLevelCell();
+}
+
+void ProfilePopup::refreshRatedLevelCell() {
+    if (!m_ratedLevelCell) {
+        return;
+    }
+
+    m_refreshScheduled = false;
+
+    if (!m_score) {
+        return;
+    }
+
+    if (m_levelCell) {
+        return;
+    }
+
+    if (m_spinner) {
+        m_spinner->removeFromParent();
+        m_spinner = nullptr;
+    }
+    m_ratedLevelCell->clear();
+
+    auto glm = GameLevelManager::get();
+    if (!glm) {
+        return;
+    }
+
+    auto searchObj = GJSearchObject::create(SearchType::UsersLevels, numToString(m_score->m_userID));
+    searchObj->m_searchMode = 0;
+    auto key = searchObj->getKey();
+    CCArray* levels = nullptr;
+
+    if (key && key[0]) {
+        levels = glm->getStoredOnlineLevels(key);
+    }
+
+    if (!levels || levels->count() == 0) {
+        glm->getOnlineLevels(searchObj);
+        if (key && key[0]) {
+            levels = glm->getStoredOnlineLevels(key);
+        }
+    }
+
+    if (!levels || levels->count() == 0) {
+        m_spinner = LoadingSpinner::create(35.f);
+        if (m_spinner) {
+            m_spinner->setAnchorPoint({0.5f, 0.5f});
+            m_spinner->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
+            m_ratedLevelCell->addChild(m_spinner);
+        }
+
+        if (!m_refreshScheduled) {
+            m_refreshScheduled = true;
+            auto delay = CCDelayTime::create(1.0f);
+            auto callback = CCCallFunc::create(this, callfunc_selector(ProfilePopup::refreshRatedLevelCell));
+            auto sequence = CCSequence::create(delay, callback, nullptr);
+            this->runAction(sequence);
+        }
+        return;
+    }
+
+    GJGameLevel* ratedLevel = nullptr;
+    for (int i = 0; i < levels->count(); ++i) {
+        auto level = typeinfo_cast<GJGameLevel*>(levels->objectAtIndex(i));
+        if (!level) {
+            continue;
+        }
+        if (level->m_stars.value() <= 0) {
+            continue;
+        }
+
+        ratedLevel = level;
+        break;
+    }
+
+    if (!ratedLevel) {
+        auto noneLabel = CCLabelBMFont::create("No rated levels", "goldFont.fnt");
+        noneLabel->setScale(0.5f);
+        noneLabel->setAnchorPoint({0.5f, 0.5f});
+        noneLabel->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
+        m_ratedLevelCell->addChild(noneLabel);
+        if (m_spinner) {
+            m_spinner->removeFromParent();
+            m_spinner = nullptr;
+        }
+        return;
+    }
+
+    m_levelCell = LevelCell::create(m_ratedLevelCell->getContentSize().width, m_ratedLevelCell->getContentSize().height);
+    if (!m_levelCell) {
+        return;
+    }
+
+    m_levelCell->m_compactView = true;
+    m_levelCell->setContentSize(m_ratedLevelCell->getContentSize());
+    m_levelCell->setAnchorPoint({0.5f, 0.5f});
+    m_levelCell->loadFromLevel(ratedLevel);
+    if (m_levelCell->m_mainMenu) {
+        auto creatorName = m_levelCell->m_mainMenu->getChildByID("creator-name");
+        creatorName->removeFromParent();
+    }
+    m_ratedLevelCell->addCell(m_levelCell);
+    if (m_spinner) {
+        m_spinner->removeFromParent();
+        m_spinner = nullptr;
+    }
+    m_ratedLevelCell->updateLayout();
 }
 
 void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
@@ -559,8 +860,9 @@ void ProfilePopup::onInfo(CCObject* sender) {
     }
 
     auto message = fmt::format(
-        "<cl>AccountID:</c> {}\n<cy>Stars:</c> {}\n<cb>Moons:</c> {}\n<cf>Diamonds:</c> {}\n<co>Secret Coins:</c> {}\n<cc>User Coins:</c> {}\n<cr>Demons:</c> {}",
+        "<cl>AccountID:</c> {}\n<cd>UserID:</c> {}\n<cy>Stars:</c> {}\n<cb>Moons:</c> {}\n<cf>Diamonds:</c> {}\n<co>Secret Coins:</c> {}\n<cc>User Coins:</c> {}\n<cr>Demons:</c> {}",
         m_score->m_accountID,
+        m_score->m_userID,
         GameToolbox::pointsToString(m_score->m_stars),
         GameToolbox::pointsToString(m_score->m_moons),
         GameToolbox::pointsToString(m_score->m_diamonds),

@@ -20,5 +20,13 @@
 				"resources/*.png"
 			]
 		}
+	},
+	"settings": {
+		"showDiamondStats":{
+			"type": "bool",
+			"name": "Show Diamond Stats",
+			"default": false,
+			"description": "Shows the user's diamond stats."
+		}
 	}
 }

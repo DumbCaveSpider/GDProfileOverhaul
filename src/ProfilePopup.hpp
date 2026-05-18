@@ -38,21 +38,30 @@ private:
     CCMenu* m_statsMenu;
     CCMenu* m_iconsMenu;
     cue::ListNode* m_commentsList;
-    cue::ListBorder* m_ratedLevelCell;
+    cue::ListNode* m_ratedLevelCell;
+
+    // leaderboard menu
+    CCMenu* m_leaderboardMenu;
 
     // right side panel
     CCMenu* m_refreshMenu;
     CCMenu* m_socialsMenu;
     CCMenu* m_onlineMenu;
 
+    // level cell
+    LoadingSpinner* m_spinner = nullptr;
+    LevelCell* m_levelCell = nullptr;
+
     // members
     int m_accountId;
     bool m_ownProfile;
     int m_commentPage = 0;
     int m_commentPageSize = 10;
+    bool m_refreshScheduled = false;
 
     void requestAccountCommentsPage(int page);
     void refreshUserInfoUI();
+    void refreshRatedLevelCell();
 
     void onList(CCObject* sender);
     void onLevel(CCObject* sender);
