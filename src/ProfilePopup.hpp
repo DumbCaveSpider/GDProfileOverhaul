@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include <Geode/utils/web.hpp>
 #include <Geode/binding/ShareCommentDelegate.hpp>
 #include <Geode/binding/ShareCommentLayer.hpp>
 #include <cue/ListBorder.hpp>
@@ -20,6 +21,8 @@ public:
     void userInfoChanged(GJUserScore* score) override;
     void loadCommentsFinished(cocos2d::CCArray* comments, char const* key) override;
     void loadCommentsFailed(char const* key) override;
+    void loadLeaderboardFinished(cocos2d::CCArray* scores, char const* key) override;
+    void loadLeaderboardFailed(char const* key) override;
     void shareCommentClosed(gd::string text, ShareCommentLayer* layer) override;
 
     bool m_hasSwitched = false;
@@ -51,6 +54,11 @@ private:
     // level cell
     LoadingSpinner* m_spinner = nullptr;
     LevelCell* m_levelCell = nullptr;
+    CCLabelBMFont* m_noneLabel = nullptr;
+
+    // leaderboard state
+    int m_moonsRank = 0;
+    bool m_moonsRankLoaded = false;
 
     // members
     int m_accountId;
@@ -62,6 +70,7 @@ private:
     void requestAccountCommentsPage(int page);
     void refreshUserInfoUI();
     void refreshRatedLevelCell();
+    void requestMoonLeaderboardRank();
 
     void onList(CCObject* sender);
     void onLevel(CCObject* sender);

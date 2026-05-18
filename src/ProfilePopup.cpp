@@ -5,6 +5,7 @@
 #include <Geode/binding/GJAccountManager.hpp>
 #include <Geode/binding/GJUserScore.hpp>
 #include <Geode/binding/GameLevelManager.hpp>
+#include <Geode/binding/GameManager.hpp>
 #include <Geode/binding/MessagesProfilePage.hpp>
 #include <Geode/binding/ProfilePage.hpp>
 #include <Geode/binding/ShareCommentDelegate.hpp>
@@ -48,6 +49,9 @@ ProfilePopup::~ProfilePopup() {
         if (glm->m_levelCommentDelegate == this) {
             glm->m_levelCommentDelegate = nullptr;
         }
+        if (glm->m_leaderboardManagerDelegate == this) {
+            glm->m_leaderboardManagerDelegate = nullptr;
+        }
     }
     if (m_profilePopup == this) {
         m_profilePopup = nullptr;
@@ -90,6 +94,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     if (glm) {
         glm->m_userInfoDelegate = this;
         glm->m_levelCommentDelegate = this;
+        glm->m_leaderboardManagerDelegate = this;
         glm->getGJUserInfo(accountId);
         m_commentPage = 0;
         m_commentPageSize = 10;
@@ -142,11 +147,12 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
 
     // leaderboard menu
     m_leaderboardMenu = CCMenu::create();
-    m_leaderboardMenu->setContentSize({50, 35});
+    m_leaderboardMenu->setContentSize({60, 45});
     m_leaderboardMenu->setID("leaderboard-menu");
     m_leaderboardMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_leaderboardMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAutoScale(true)->setAxisReverse(true));
-    m_leaderboardMenu->setZOrder(1);
+    m_leaderboardMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAutoScale(true)->setAxisReverse(true)->setCrossAxisAlignment(AxisAlignment::Start)->setCrossAxisLineAlignment(AxisAlignment::Start));
+    m_leaderboardMenu->setZOrder(5);
+    m_leaderboardMenu->setScale(0.8f);
     m_mainLayer->addChildAtPosition(m_leaderboardMenu, Anchor::TopRight, {-90.f, -30.f}, {0.5, 0.5}, false);
 
     // center panel
@@ -156,7 +162,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_usernameMenu->m_bIgnoreAnchorPointForPosition = false;
     m_usernameMenu->setZOrder(5);
     m_usernameMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setCrossAxisOverflow(false)->setAutoScale(true));
-    m_mainLayer->addChildAtPosition(m_usernameMenu, Anchor::Top, {-25.f, -25.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_usernameMenu, Anchor::TopLeft, {60.f, -25.f}, {0, 0.5}, false);
 
     m_statsMenu = CCMenu::create();
     m_statsMenu->setContentSize({270, 15});
@@ -164,32 +170,33 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_statsMenu->m_bIgnoreAnchorPointForPosition = false;
     m_statsMenu->setZOrder(5);
     m_statsMenu->setScale(0.8f);
+    m_statsMenu->setAnchorPoint({0.f, 0.5f});
     m_statsMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Start)->setGap(2.5f)->setCrossAxisOverflow(false)->setAutoScale(false));
-    m_mainLayer->addChildAtPosition(m_statsMenu, Anchor::Top, {-55.f, -45.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_statsMenu, Anchor::TopLeft, {60.f, -45.f}, {0, 0.5}, false);
 
     m_iconsMenu = CCMenu::create();
-    m_iconsMenu->setContentSize({315, 45});
+    m_iconsMenu->setContentSize({315, 40});
     m_iconsMenu->setID("icons-menu");
     m_iconsMenu->setZOrder(1);
     m_iconsMenu->setLayout(RowLayout::create()->setAxisAlignment(AxisAlignment::Center)->setGap(10.f)->setCrossAxisOverflow(false)->setAutoScale(true));
-    m_mainLayer->addChildAtPosition(m_iconsMenu, Anchor::Center, {0.f, 65.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_iconsMenu, Anchor::Center, {0.f, 69.f}, {0.5, 0.5}, false);
 
-    auto iconsMenuBorder = cue::ListBorder::create(cue::ListBorderStyle::Comments, {325, 45}, ccColor4B{191, 114, 62, 255});
+    auto iconsMenuBorder = cue::ListBorder::create(cue::ListBorderStyle::Comments, {325, 40}, ccColor4B{191, 114, 62, 255});
     iconsMenuBorder->m_bIgnoreAnchorPointForPosition = false;
     iconsMenuBorder->setZOrder(2);
-    m_mainLayer->addChildAtPosition(iconsMenuBorder, Anchor::Center, {0.f, 65.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(iconsMenuBorder, Anchor::Center, {0.f, 69.f}, {0.5, 0.5}, false);
 
     auto iconsMenuBg = CCLayerColor::create({191, 114, 62, 255}, iconsMenuBorder->getContentSize().width, iconsMenuBorder->getContentSize().height);
     iconsMenuBg->m_bIgnoreAnchorPointForPosition = false;
     iconsMenuBg->setZOrder(0);
-    m_mainLayer->addChildAtPosition(iconsMenuBg, Anchor::Center, {0.f, 65.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(iconsMenuBg, Anchor::Center, {0.f, 69.f}, {0.5, 0.5}, false);
 
     m_commentsList = cue::ListNode::create({325, 85}, {191, 114, 62, 255}, cue::ListBorderStyle::Comments);
     m_commentsList->setID("comments-list");
-    m_commentsList->setZOrder(2);
+    m_commentsList->setZOrder(1);
     m_commentsList->setCellHeight(85.f);
     m_commentsList->setAutoUpdate(true);
-    m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -10.f}, {0.5, 0.5}, false);
+    m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -7.f}, {0.5, 0.5}, false);
 
     m_ratedLevelCell = cue::ListNode::create({325, 50}, ccColor4B{191, 114, 62, 255}, cue::ListBorderStyle::Comments);
     m_ratedLevelCell->setID("rated-level-cell");
@@ -244,6 +251,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
 
     if (m_score) {
         refreshUserInfoUI();
+        requestMoonLeaderboardRank();
     }
 
     return true;
@@ -262,6 +270,7 @@ void ProfilePopup::refreshUserInfoUI() {
     m_onlineMenu->removeAllChildren();
     m_otherOptionsMenu->removeAllChildren();
     m_socialsMenu->removeAllChildren();
+    m_leaderboardMenu->removeAllChildren();
 
     if (m_buttonMenu) m_buttonMenu->removeAllChildren();
     if (!m_score) {
@@ -273,6 +282,7 @@ void ProfilePopup::refreshUserInfoUI() {
         m_onlineMenu->updateLayout();
         m_otherOptionsMenu->updateLayout();
         m_socialsMenu->updateLayout();
+        m_leaderboardMenu->updateLayout();
         return;
     }
 
@@ -659,6 +669,12 @@ void ProfilePopup::refreshUserInfoUI() {
         m_otherOptionsMenu->updateLayout();
     }
 
+    // @geode-ignore(unknown-resource)
+    auto refreshBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/reload.png"), [this](geode::Button* sender) {
+        refreshUserInfoUI();
+    });
+    m_otherOptionsMenu->addChild(refreshBtn);
+
     // middle right menu
     if (m_score->m_youtubeURL.size() > 0) {
         auto youtubeBtn = Button::createWithSpriteFrameName("gj_ytIcon_001.png", [this](geode::Button* sender) {
@@ -716,21 +732,27 @@ void ProfilePopup::refreshUserInfoUI() {
     //log::debug("moon stuff {}", GameLevelManager::get()->getLeaderboardScore(LeaderboardType::Global, LeaderboardStat::Moons));
     if (m_score->m_globalRank > 0) {
         auto starsLeaderboardBtn = Button::createWithLabel(fmt::format("Stars Rank:\n{}", m_score->m_globalRank), "chatFont.fnt", [this](geode::Button* sender) {
+            if (!m_score) return;
+            if (!m_score->isCurrentUser()) return;
             m_score->m_leaderboardStat = LeaderboardStat::Stars;
             auto scene = CCScene::create();
             auto layer = LeaderboardsLayer::create(LeaderboardType::Global, m_score->m_leaderboardStat);
             scene->addChild(layer);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
         });
+        if (!m_score->isCurrentUser()) starsLeaderboardBtn->setEnabled(false);
         starsLeaderboardBtn->setColor({233, 253, 113});
 
-        auto moonsLeaderboardBtn = Button::createWithLabel(fmt::format("Moons Rank:\n{}", m_score->m_globalRank), "chatFont.fnt", [this](geode::Button* sender) {
+        auto moonsLeaderboardBtn = Button::createWithLabel(fmt::format("Moons Rank:\n{}", m_moonsRankLoaded ? m_moonsRank : 0), "chatFont.fnt", [this](geode::Button* sender) {
+            if (!m_score) return;
+            if (!m_score->isCurrentUser()) return;
             m_score->m_leaderboardStat = LeaderboardStat::Moons;
             auto scene = CCScene::create();
             auto layer = LeaderboardsLayer::create(LeaderboardType::Global, m_score->m_leaderboardStat);
             scene->addChild(layer);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
         });
+        if (!m_score->isCurrentUser()) moonsLeaderboardBtn->setEnabled(false);
         moonsLeaderboardBtn->setColor({109, 215, 249});
         m_leaderboardMenu->addChild(starsLeaderboardBtn);
         m_leaderboardMenu->addChild(moonsLeaderboardBtn);
@@ -758,6 +780,11 @@ void ProfilePopup::refreshRatedLevelCell() {
     if (m_spinner) {
         m_spinner->removeFromParent();
         m_spinner = nullptr;
+    }
+
+    if (m_noneLabel) {
+        m_noneLabel->removeFromParent();
+        m_noneLabel = nullptr;
     }
     m_ratedLevelCell->clear();
 
@@ -814,12 +841,12 @@ void ProfilePopup::refreshRatedLevelCell() {
         break;
     }
 
-    if (!ratedLevel) {
-        auto noneLabel = CCLabelBMFont::create("No rated levels", "goldFont.fnt");
-        noneLabel->setScale(0.5f);
-        noneLabel->setAnchorPoint({0.5f, 0.5f});
-        noneLabel->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
-        m_ratedLevelCell->addChild(noneLabel);
+    if (!ratedLevel && !m_noneLabel) {
+        m_noneLabel = CCLabelBMFont::create("No rated levels", "goldFont.fnt");
+        m_noneLabel->setScale(0.5f);
+        m_noneLabel->setAnchorPoint({0.5f, 0.5f});
+        m_noneLabel->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
+        m_ratedLevelCell->addChild(m_noneLabel);
         if (m_spinner) {
             m_spinner->removeFromParent();
             m_spinner = nullptr;
@@ -848,8 +875,93 @@ void ProfilePopup::refreshRatedLevelCell() {
     m_ratedLevelCell->updateLayout();
 }
 
+void ProfilePopup::requestMoonLeaderboardRank() {
+    if (!m_score) {
+        return;
+    }
+
+    auto glm = GameLevelManager::get();
+    if (!glm) {
+        return;
+    }
+
+    m_moonsRankLoaded = false;
+    m_moonsRank = 0;
+    glm->getLeaderboardScores(LeaderboardType::Global, LeaderboardStat::Moons);
+}
+
 void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
     m_score = score;
+    refreshUserInfoUI();
+    requestMoonLeaderboardRank();
+}
+
+void ProfilePopup::loadLeaderboardFinished(cocos2d::CCArray* scores, char const* key) {
+    if (!scores || !key || !m_score) {
+        return;
+    }
+
+    auto glm = GameLevelManager::get();
+    if (!glm) {
+        return;
+    }
+
+    if (std::string(key) != glm->getLeaderboardKey(LeaderboardType::Global, LeaderboardStat::Moons)) {
+        return;
+    }
+
+    log::debug("moon leaderboard finished: scores={}, key={}", scores->count(), key);
+    int foundRank = 0;
+    for (auto i = 0u; i < scores->count(); ++i) {
+        auto object = scores->objectAtIndex(i);
+        if (!object) {
+            continue;
+        }
+
+        GJUserScore* score = nullptr;
+        if (auto userScore = typeinfo_cast<GJUserScore*>(object)) {
+            score = GJUserScore::create();
+            if (score) {
+                score->m_userID = userScore->m_userID;
+                score->m_accountID = userScore->m_accountID;
+                score->m_globalRank = userScore->m_globalRank;
+                score->m_playerRank = userScore->m_playerRank;
+            }
+        } else if (auto dict = typeinfo_cast<CCDictionary*>(object)) {
+            score = GJUserScore::create(dict);
+        }
+
+        if (!score) {
+            continue;
+        }
+
+        if (score->m_userID == m_score->m_userID || score->m_accountID == m_score->m_accountID) {
+            foundRank = score->m_globalRank > 0 ? score->m_globalRank : score->m_playerRank;
+            break;
+        }
+    }
+
+    m_moonsRankLoaded = true;
+    m_moonsRank = foundRank;
+    refreshUserInfoUI();
+}
+
+void ProfilePopup::loadLeaderboardFailed(char const* key) {
+    if (!key) {
+        return;
+    }
+
+    auto glm = GameLevelManager::get();
+    if (!glm) {
+        return;
+    }
+
+    if (std::string(key) != glm->getLeaderboardKey(LeaderboardType::Global, LeaderboardStat::Moons)) {
+        return;
+    }
+
+    m_moonsRankLoaded = true;
+    m_moonsRank = 0;
     refreshUserInfoUI();
 }
 
@@ -927,6 +1039,12 @@ void ProfilePopup::loadCommentsFinished(cocos2d::CCArray* comments, char const* 
         cell->m_backgroundLayer->setOpacity(0);
         cell->m_accountComment = true;
         m_commentsList->addCell(cell);
+        if (auto usernameLabel = cell->m_mainLayer->getChildByID("username-label")) usernameLabel->removeFromParent();
+        if (auto dateLabel = cell->m_mainLayer->getChildByID("date-label")) {
+            dateLabel->setAnchorPoint({0.f, 0.5f});
+            dateLabel->setPosition({10.f, cell->getContentSize().height - 20.f});
+            dateLabel->setScale(1.f);
+        }
     }
 
     m_commentsList->updateLayout();
