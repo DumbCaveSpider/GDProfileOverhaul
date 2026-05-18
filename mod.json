@@ -29,5 +29,5 @@
 			"description": "Shows the user's diamond stats."
 		}
 	},
-	"tags": ["enhancement","interface","offline"]
+	"tags": ["enhancement","interface","online"]
 }
