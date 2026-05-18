@@ -746,7 +746,7 @@ void ProfilePopup::refreshUserInfoUI() {
     // middle right menu
     if (m_score->m_youtubeURL.size() > 0) {
         auto youtubeBtn = Button::createWithSpriteFrameName("gj_ytIcon_001.png", [this](geode::Button* sender) {
-            utils::web::openLinkInBrowser(std::string("https://youtube.com/") + m_score->m_youtubeURL.c_str());
+            utils::web::openLinkInBrowser(std::string("https://youtube.com/channel/") + m_score->m_youtubeURL.c_str());
         });
         m_socialsMenu->addChild(youtubeBtn);
     }
