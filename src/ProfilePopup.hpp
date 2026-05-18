@@ -46,7 +46,8 @@ private:
     CCMenu* m_statsMenu;
     CCMenu* m_iconsMenu;
     cue::ListNode* m_commentsList;
-    cue::ListNode* m_ratedLevelCell;
+    cue::ListBorder* m_levelCellBorder;
+    cocos2d::CCNode* m_levelContainer = nullptr;
 
     // comments UI
     LoadingSpinner* m_commentsSpinner = nullptr;

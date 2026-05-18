@@ -243,13 +243,18 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_commentsList->setAutoUpdate(true);
     m_mainLayer->addChildAtPosition(m_commentsList, Anchor::Center, {0.f, -7.f}, {0.5, 0.5}, false);
 
-    m_ratedLevelCell = cue::ListNode::create({325, 70}, ccColor4B{191, 114, 62, 255}, cue::ListBorderStyle::Comments);
-    m_ratedLevelCell->setID("rated-level-cell");
-    m_ratedLevelCell->setZOrder(2);
-    m_ratedLevelCell->getScrollLayer()->m_disableMovement = true;
-    m_mainLayer->addChildAtPosition(m_ratedLevelCell, Anchor::Bottom, {0.f, 50.f}, {0.5, 0.5}, false);
+    m_levelCellBorder = cue::ListBorder::create(cue::ListBorderStyle::Comments, {325, 70}, ccColor4B{191, 114, 62, 255});
+    m_levelCellBorder->setID("level-cell-border");
+    m_levelCellBorder->setZOrder(2);
+    m_mainLayer->addChildAtPosition(m_levelCellBorder, Anchor::Bottom, {0.f, 50.f}, {0.5, 0.5}, false);
 
-    auto levelCellBg = CCLayerColor::create({191, 114, 62, 255}, m_ratedLevelCell->getContentSize().width, m_ratedLevelCell->getContentSize().height);
+    m_levelContainer = CCNode::create();
+    m_levelContainer->setContentSize(m_levelCellBorder->getContentSize());
+    m_levelContainer->setAnchorPoint({0.5f, 0.5f});
+    m_levelContainer->setPosition({0, 0});
+    m_levelCellBorder->addChild(m_levelContainer, -1);
+
+    auto levelCellBg = CCLayerColor::create({191, 114, 62, 255}, m_levelCellBorder->getContentSize().width, m_levelCellBorder->getContentSize().height);
     levelCellBg->m_bIgnoreAnchorPointForPosition = false;
     levelCellBg->setZOrder(0);
     m_mainLayer->addChildAtPosition(levelCellBg, Anchor::Bottom, {0.f, 50.f}, {0.5, 0.5}, false);
@@ -856,7 +861,7 @@ void ProfilePopup::refreshUserInfoUI() {
 }
 
 void ProfilePopup::refreshRatedLevelCell() {
-    if (!m_ratedLevelCell) {
+    if (!m_levelCellBorder) {
         return;
     }
 
@@ -879,7 +884,9 @@ void ProfilePopup::refreshRatedLevelCell() {
         m_noneLabel->removeFromParent();
         m_noneLabel = nullptr;
     }
-    m_ratedLevelCell->clear();
+    if (m_levelContainer) {
+        m_levelContainer->removeAllChildrenWithCleanup(true);
+    }
 
     auto glm = GameLevelManager::get();
     if (!glm) {
@@ -916,8 +923,8 @@ void ProfilePopup::refreshRatedLevelCell() {
         m_spinner = LoadingSpinner::create(35.f);
         if (m_spinner) {
             m_spinner->setAnchorPoint({0.5f, 0.5f});
-            m_spinner->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
-            m_ratedLevelCell->addChild(m_spinner);
+            m_spinner->setPosition({m_levelCellBorder->getContentSize().width, m_levelCellBorder->getContentSize().height});
+            if (m_levelContainer) m_levelContainer->addChild(m_spinner);
         }
 
         if (!m_refreshScheduled) {
@@ -958,7 +965,7 @@ void ProfilePopup::refreshRatedLevelCell() {
         return;
     }
 
-    m_levelCell = LevelCell::create(m_ratedLevelCell->getContentSize().width, m_ratedLevelCell->getContentSize().height);
+    m_levelCell = LevelCell::create(m_levelCellBorder->getContentSize().width, m_levelCellBorder->getContentSize().height);
     if (!m_levelCell) {
         return;
     }
@@ -966,7 +973,7 @@ void ProfilePopup::refreshRatedLevelCell() {
     m_levelCell->setUserFlag("profile-overhaul-level-cell");
     m_levelCell->setVisible(true);
 
-    m_levelCell->setContentSize(m_ratedLevelCell->getContentSize());
+    m_levelCell->setContentSize(m_levelCellBorder->getContentSize());
     m_levelCell->setAnchorPoint({0.5f, 0.5f});
     m_levelCell->loadFromLevel(ratedLevel);
     if (m_levelCell->m_mainMenu) {
@@ -997,8 +1004,11 @@ void ProfilePopup::refreshRatedLevelCell() {
         m_spinner->removeFromParent();
         m_spinner = nullptr;
     }
-    m_ratedLevelCell->addCell(m_levelCell);
-    m_ratedLevelCell->updateLayout();
+    if (m_levelCell) {
+        m_levelCell->setPosition({m_levelContainer->getContentSize().width / 2.f, m_levelContainer->getContentSize().height / 2.f});
+        if (m_levelContainer) m_levelContainer->addChild(m_levelCell);
+    }
+    m_levelCellBorder->updateLayout();
 }
 
 void ProfilePopup::showNoRatedLevelLabel(bool showLatestLevel) {
@@ -1014,9 +1024,12 @@ void ProfilePopup::showNoRatedLevelLabel(bool showLatestLevel) {
     m_noneLabel = CCLabelBMFont::create(showLatestLevel ? "No level found" : "No rated level", "goldFont.fnt");
     m_noneLabel->setScale(0.5f);
     m_noneLabel->setAnchorPoint({0.5f, 0.5f});
-    m_noneLabel->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
-    m_ratedLevelCell->addChild(m_noneLabel);
-    m_ratedLevelCell->updateLayout();
+    m_noneLabel->setPosition({m_levelCellBorder->getContentSize().width / 2.f, m_levelCellBorder->getContentSize().height / 2.f});
+    if (m_levelContainer)
+        m_levelContainer->addChild(m_noneLabel);
+    else
+        m_levelCellBorder->addChild(m_noneLabel);
+    m_levelCellBorder->updateLayout();
 }
 
 void ProfilePopup::requestMoonLeaderboardRank() {

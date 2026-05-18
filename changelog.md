@@ -4,6 +4,7 @@
 - Replace all of the vanilla nodes to hide instead of removing it entirely
 - Tweaked the comments date label
 - Fixed bug where user with creator points doesn't show their rated level
+- Fixed bug on the comment list not scrolling using the scroll wheel
 
 ## v1.0.0
 
