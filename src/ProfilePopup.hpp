@@ -64,6 +64,7 @@ private:
     LoadingSpinner* m_spinner = nullptr;
     LevelCell* m_levelCell = nullptr;
     CCLabelBMFont* m_noneLabel = nullptr;
+    int m_ratedLevelPage = 0;
     bool m_ratedLevelFetchCompleted = false;
     bool m_ratedLevelFetchFailed = false;
     gd::string m_ratedLevelSearchKey;

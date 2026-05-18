@@ -192,12 +192,12 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
 
     // leaderboard menu
     m_leaderboardMenu = CCMenu::create();
-    m_leaderboardMenu->setContentSize({60, 45});
+    m_leaderboardMenu->setContentSize({60, 65});
     m_leaderboardMenu->setID("leaderboard-menu");
     m_leaderboardMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_leaderboardMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAutoScale(true)->setAxisReverse(true)->setCrossAxisAlignment(AxisAlignment::Start)->setCrossAxisLineAlignment(AxisAlignment::Start));
+    m_leaderboardMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAutoScale(true)->setAxisReverse(true)->setCrossAxisAlignment(AxisAlignment::Start)->setCrossAxisLineAlignment(AxisAlignment::Start)->setGap(10.f));
     m_leaderboardMenu->setZOrder(5);
-    m_leaderboardMenu->setScale(0.8f);
+    m_leaderboardMenu->setScale(0.7f);
     m_mainLayer->addChildAtPosition(m_leaderboardMenu, Anchor::TopRight, {-80.f, -30.f}, {0.5, 0.5}, false);
 
     // center panel
@@ -332,11 +332,16 @@ void ProfilePopup::refreshUserInfoUI() {
     }
 
     if (m_levelCell) {
-        m_levelCell->removeFromParent();
+        m_levelCell->setVisible(false);
         m_levelCell = nullptr;
     }
 
-    log::info("refresh user score UI: username={}, stars={}, demons={}, creator points={}", m_score->m_userName, m_score->m_stars, m_score->m_demons, m_score->m_creatorPoints);
+    m_ratedLevelPage = 0;
+    m_ratedLevelSearchKey.clear();
+    m_ratedLevelFetchCompleted = false;
+    m_ratedLevelFetchFailed = false;
+
+    log::debug("refresh user score UI: username={}, stars={}, demons={}, creator points={}", m_score->m_userName, m_score->m_stars, m_score->m_demons, m_score->m_creatorPoints);
     auto infoSpr = CCSpriteGrayscale::createWithSpriteFrameName("GJ_infoIcon_001.png");
     auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(ProfilePopup::onInfo));
     if (m_buttonMenu) m_buttonMenu->addChildAtPosition(infoBtn, Anchor::TopRight, {-5.f, -5.f}, {0.5f, 0.5f}, false);
@@ -883,6 +888,7 @@ void ProfilePopup::refreshRatedLevelCell() {
 
     auto searchObj = GJSearchObject::create(SearchType::UsersLevels, numToString(m_score->m_userID));
     searchObj->m_searchMode = 0;
+    searchObj->m_page = m_ratedLevelPage;
     auto key = searchObj->getKey();
     CCArray* levels = nullptr;
     const bool showLatestLevel = m_score->m_creatorPoints == 0;
@@ -939,6 +945,15 @@ void ProfilePopup::refreshRatedLevelCell() {
     }
 
     if (!ratedLevel) {
+        if (m_score->m_creatorPoints > 0) {
+            ++m_ratedLevelPage;
+            m_ratedLevelSearchKey.clear();
+            m_ratedLevelFetchCompleted = false;
+            m_ratedLevelFetchFailed = false;
+            refreshRatedLevelCell();
+            return;
+        }
+
         showNoRatedLevelLabel(showLatestLevel);
         return;
     }
@@ -948,12 +963,15 @@ void ProfilePopup::refreshRatedLevelCell() {
         return;
     }
 
+    m_levelCell->setUserFlag("profile-overhaul-level-cell");
+    m_levelCell->setVisible(true);
+
     m_levelCell->setContentSize(m_ratedLevelCell->getContentSize());
     m_levelCell->setAnchorPoint({0.5f, 0.5f});
     m_levelCell->loadFromLevel(ratedLevel);
     if (m_levelCell->m_mainMenu) {
         auto creatorName = m_levelCell->m_mainMenu->getChildByID("creator-name");
-        creatorName->removeFromParent();
+        if (creatorName) creatorName->setVisible(false);
     }
     if (m_levelCell->m_mainLayer) {
         auto levelName = m_levelCell->m_mainLayer->getChildByID("level-name");
@@ -963,13 +981,17 @@ void ProfilePopup::refreshRatedLevelCell() {
         auto copyIndicator = m_levelCell->m_mainLayer->getChildByID("copy-indicator");
         auto highObjIndicator = m_levelCell->m_mainLayer->getChildByID("high-object-indicator");
         auto percentageLabel = m_levelCell->m_mainLayer->getChildByID("percentage-label");
+        auto ncsLogo = m_levelCell->m_mainLayer->getChildByID("ncs-icon");
+        auto chompoLogo = m_levelCell->m_mainLayer->getChildByID("chompo-icon");
         if (levelName) levelName->setPositionY(levelName->getPositionY() - 10.f);
         if (songName) songName->setPosition({songName->getPositionX() - 2.f, songName->getPositionY() + 11.f});
         if (difficultyContainer) difficultyContainer->setScale(difficultyContainer->getScale() - 0.2f);
-        if (completedIcon) completedIcon->removeFromParent();
-        if (copyIndicator) copyIndicator->removeFromParent();
-        if (highObjIndicator) highObjIndicator->removeFromParent();
+        if (completedIcon) completedIcon->setVisible(false);
+        if (copyIndicator) copyIndicator->setVisible(false);
+        if (highObjIndicator) highObjIndicator->setVisible(false);
         if (percentageLabel) percentageLabel->setPositionY(percentageLabel->getPositionY() - 10.f);
+        if (ncsLogo) ncsLogo->setPositionY(ncsLogo->getPositionY() + 10.f);
+        if (chompoLogo) chompoLogo->setPositionY(chompoLogo->getPositionY() + 10.f);
     }
     if (m_spinner) {
         m_spinner->removeFromParent();
@@ -1196,16 +1218,19 @@ void ProfilePopup::loadCommentsFinished(cocos2d::CCArray* comments, char const* 
             continue;
         }
 
+        cell->setUserFlag("profile-overhaul-comment-cell");
+        cell->setVisible(true);
+
         cell->setContentHeight(85);
         cell->loadFromComment(comment);
         cell->m_backgroundLayer->setVisible(false);
         cell->m_accountComment = true;
         m_commentsList->addCell(cell);
-        if (auto usernameLabel = cell->m_mainLayer->getChildByID("username-label")) usernameLabel->removeFromParent();
+        if (auto usernameLabel = cell->m_mainLayer->getChildByID("username-label")) usernameLabel->setVisible(false);
         if (auto dateLabel = cell->m_mainLayer->getChildByID("date-label")) {
             dateLabel->setAnchorPoint({0.f, 0.5f});
-            dateLabel->setPosition({10.f, cell->getContentSize().height - 20.f});
-            dateLabel->setScale(1.f);
+            dateLabel->setPosition({10.f, cell->getContentSize().height - 15.f});
+            dateLabel->setScale(.7f);
         }
     }
 
