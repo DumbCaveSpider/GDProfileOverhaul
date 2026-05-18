@@ -505,6 +505,19 @@ void ProfilePopup::refreshUserInfoUI() {
             newFriendBadge->addChild(newFriendCountLabel);
         }
 
+        // @geode-ignore(unknown-resource)
+        auto shareCommentBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/message.png"), [this](geode::Button* sender) {
+            if (m_score) {
+                if (auto layer = ShareCommentLayer::create("Post Account Update", 140, CommentType::Account, m_score->m_accountID, "")) {
+                    layer->m_delegate = this;
+                    layer->show();
+                }
+            }
+        });
+        m_userOptionsMenu->addChild(shareCommentBtn);
+    }
+
+    if ((m_score->m_messageState == 0) || (m_score->m_messageState == 1 && m_score->m_friendReqStatus == 1) || (m_score->isCurrentUser())) {
         auto messageBtn = Button::createWithSpriteFrameName("accountBtn_messages_001.png", [this](geode::Button* sender) {
             if (m_score) {
                 if (m_ownProfile) {
@@ -528,17 +541,6 @@ void ProfilePopup::refreshUserInfoUI() {
             msgCountLabel->setPosition({msgBadge->getContentSize().width / 2.f, msgBadge->getContentSize().height / 2.f});
             msgBadge->addChild(msgCountLabel);
         }
-
-        // @geode-ignore(unknown-resource)
-        auto shareCommentBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/message.png"), [this](geode::Button* sender) {
-            if (m_score) {
-                if (auto layer = ShareCommentLayer::create("Post Account Update", 140, CommentType::Account, m_score->m_accountID, "")) {
-                    layer->m_delegate = this;
-                    layer->show();
-                }
-            }
-        });
-        m_userOptionsMenu->addChild(shareCommentBtn);
     }
 
     if (!m_score->isCurrentUser()) {
@@ -675,7 +677,7 @@ void ProfilePopup::refreshUserInfoUI() {
         this->refreshComments();
     });
     refreshBtn->setScale(0.6f);
-    m_buttonMenu->addChildAtPosition(refreshBtn, Anchor::BottomRight, {0.f, 0.f});
+    m_buttonMenu->addChildAtPosition(refreshBtn, Anchor::BottomLeft, {0.f, 0.f});
 
     // middle right menu
     if (m_score->m_youtubeURL.size() > 0) {
@@ -733,7 +735,7 @@ void ProfilePopup::refreshUserInfoUI() {
     log::debug("stars rank is {}", m_score->m_globalRank);
     //log::debug("moon stuff {}", GameLevelManager::get()->getLeaderboardScore(LeaderboardType::Global, LeaderboardStat::Moons));
     if (m_score->m_globalRank > 0) {
-        auto starsLeaderboardBtn = Button::createWithLabel(fmt::format("Stars Rank:\n{}", m_score->m_globalRank), "chatFont.fnt", [this](geode::Button* sender) {
+        auto starsLeaderboardBtn = Button::createWithLabel(fmt::format("Stars Rank:\n#{}", m_score->m_globalRank), "chatFont.fnt", [this](geode::Button* sender) {
             if (!m_score) return;
             if (!m_score->isCurrentUser()) return;
             m_score->m_leaderboardStat = LeaderboardStat::Stars;
@@ -747,7 +749,7 @@ void ProfilePopup::refreshUserInfoUI() {
         m_leaderboardMenu->addChild(starsLeaderboardBtn);
 
         if (m_score->isCurrentUser() && m_moonsRankLoaded && m_moonsRank > 0) {
-            auto moonsLeaderboardBtn = Button::createWithLabel(fmt::format("Moons Rank:\n{}", m_moonsRankLoaded ? m_moonsRank : 0), "chatFont.fnt", [this](geode::Button* sender) {
+            auto moonsLeaderboardBtn = Button::createWithLabel(fmt::format("Moons Rank:\n#{}", m_moonsRankLoaded ? m_moonsRank : 0), "chatFont.fnt", [this](geode::Button* sender) {
                 if (!m_score) return;
                 if (!m_score->isCurrentUser()) return;
                 m_score->m_leaderboardStat = LeaderboardStat::Moons;
@@ -834,12 +836,13 @@ void ProfilePopup::refreshRatedLevelCell() {
     }
 
     GJGameLevel* ratedLevel = nullptr;
+    const bool showLatestLevel = m_score->m_creatorPoints == 0;
     for (int i = 0; i < levels->count(); ++i) {
         auto level = typeinfo_cast<GJGameLevel*>(levels->objectAtIndex(i));
         if (!level) {
             continue;
         }
-        if (level->m_stars.value() <= 0) {
+        if (!showLatestLevel && level->m_stars.value() <= 0) {
             continue;
         }
 
@@ -848,7 +851,7 @@ void ProfilePopup::refreshRatedLevelCell() {
     }
 
     if (!ratedLevel && !m_noneLabel) {
-        m_noneLabel = CCLabelBMFont::create("No rated levels", "goldFont.fnt");
+        m_noneLabel = CCLabelBMFont::create(showLatestLevel ? "No level found" : "No rated level", "goldFont.fnt");
         m_noneLabel->setScale(0.5f);
         m_noneLabel->setAnchorPoint({0.5f, 0.5f});
         m_noneLabel->setPosition({m_ratedLevelCell->getContentSize().width / 2.f, m_ratedLevelCell->getContentSize().height / 2.f});
@@ -874,15 +877,17 @@ void ProfilePopup::refreshRatedLevelCell() {
     }
     if (m_levelCell->m_mainLayer) {
         auto levelName = m_levelCell->m_mainLayer->getChildByID("level-name");
-        auto completedIcon = m_levelCell->m_mainLayer->getChildByID("completed-icon");
         auto songName = m_levelCell->m_mainLayer->getChildByID("song-name");
         auto difficultyContainer = m_levelCell->m_mainLayer->getChildByID("difficulty-container");
+        auto completedIcon = m_levelCell->m_mainLayer->getChildByID("completed-icon");
         auto copyIndicator = m_levelCell->m_mainLayer->getChildByID("copy-indicator");
+        auto highObjIndicator = m_levelCell->m_mainLayer->getChildByID("high-object-indicator");
         if (levelName) levelName->setPositionY(levelName->getPositionY() - 10.f);
-        if (completedIcon) completedIcon->removeFromParent();
         if (songName) songName->setPosition({songName->getPositionX() - 2.f, songName->getPositionY() + 11.f});
         if (difficultyContainer) difficultyContainer->setScale(difficultyContainer->getScale() - 0.1f);
+        if (completedIcon) completedIcon->removeFromParent();
         if (copyIndicator) copyIndicator->removeFromParent();
+        if (highObjIndicator) highObjIndicator->removeFromParent();
     }
     if (m_spinner) {
         m_spinner->removeFromParent();
@@ -1061,7 +1066,7 @@ void ProfilePopup::loadCommentsFinished(cocos2d::CCArray* comments, char const* 
 
         cell->setContentHeight(85);
         cell->loadFromComment(comment);
-        cell->m_backgroundLayer->setOpacity(0);
+        cell->m_backgroundLayer->setVisible(false);
         cell->m_accountComment = true;
         m_commentsList->addCell(cell);
         if (auto usernameLabel = cell->m_mainLayer->getChildByID("username-label")) usernameLabel->removeFromParent();
