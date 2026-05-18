@@ -25,7 +25,7 @@ class $modify(MessagesProfilePage) {
 
 class $modify(FRequestProfilePage) {
     void onClose(CCObject* sender) {
-        if (!profile::onVanillaProfilePage) {
+        if (!profile::onVanillaProfilePage && m_sent == false) {
             setKeypadEnabled(false);
             removeFromParentAndCleanup(true);
         } else {
@@ -36,7 +36,7 @@ class $modify(FRequestProfilePage) {
 
 class $modify(FriendsProfilePage) {
     void onClose(CCObject* sender) {
-        if (!profile::onVanillaProfilePage) {
+        if (!profile::onVanillaProfilePage && m_type == UserListType::Friends) {
             setKeypadEnabled(false);
             removeFromParentAndCleanup(true);
         } else {

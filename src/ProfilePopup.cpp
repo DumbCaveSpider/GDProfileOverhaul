@@ -14,11 +14,14 @@
 #include <cue/ListBorder.hpp>
 #include <cue/ListNode.hpp>
 #include <cue/PlayerIcon.hpp>
+#include "Geode/c++stl/string.hpp"
+#include "Geode/cocos/layers_scenes_transitions_nodes/CCTransition.h"
 #include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/NineSlice.hpp"
 #include "Geode/ui/Button.hpp"
 #include "Geode/ui/Popup.hpp"
+#include "Geode/utils/general.hpp"
 #include "include/ProfileOverhaulConstant.hpp"
 
 using namespace geode::prelude;
@@ -107,7 +110,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_userOptionsMenu->setContentSize({35, 135});
     m_userOptionsMenu->setID("user-options-menu");
     m_userOptionsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_userOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false));
+    m_userOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true));
     m_userOptionsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_userOptionsMenu, Anchor::Left, {30.f, 20.f}, {0.5, 0.5}, false);
 
@@ -120,7 +123,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_otherOptionsMenu->setContentSize({35, 70});
     m_otherOptionsMenu->setID("other-options-menu");
     m_otherOptionsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_otherOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false));
+    m_otherOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true));
     m_otherOptionsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_otherOptionsMenu, Anchor::BottomLeft, {30.f, 50.f}, {0.5, 0.5}, false);
 
@@ -175,7 +178,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_ratedLevelCell->setZOrder(2);
     m_mainLayer->addChildAtPosition(m_ratedLevelCell, Anchor::Center, {0.f, -85.f}, {0.5, 0.5}, false);
 
-    auto levelCellBg = CCLayerColor::create({191, 114, 62, 255}, iconsMenuBorder->getContentSize().width, iconsMenuBorder->getContentSize().height);
+    auto levelCellBg = CCLayerColor::create({191, 114, 62, 255}, m_ratedLevelCell->getContentSize().width, m_ratedLevelCell->getContentSize().height);
     levelCellBg->m_bIgnoreAnchorPointForPosition = false;
     levelCellBg->setZOrder(0);
     m_mainLayer->addChildAtPosition(levelCellBg, Anchor::Center, {0.f, -85.f}, {0.5, 0.5}, false);
@@ -198,7 +201,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_socialsMenu->setContentSize({35, 135});
     m_socialsMenu->setID("socials-menu");
     m_socialsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_socialsMenu->setLayout(ColumnLayout::create());
+    m_socialsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false));
     m_socialsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_socialsMenu, Anchor::Right, {-30.f, 20.f}, {0.5, 0.5}, false);
 
@@ -211,7 +214,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_onlineMenu->setContentSize({35, 70});
     m_onlineMenu->setID("online-menu");
     m_onlineMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_onlineMenu->setLayout(ColumnLayout::create());
+    m_onlineMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true));
     m_onlineMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_onlineMenu, Anchor::BottomRight, {-30.f, 50.f}, {0.5, 0.5}, false);
 
@@ -220,161 +223,165 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     onlineMenuBg->setOpacity(100);
     m_mainLayer->addChildAtPosition(onlineMenuBg, Anchor::BottomRight, {-30.f, 50.f}, {0.5, 0.5}, false);
 
+    if (m_score) {
+        refreshUserInfoUI();
+    }
+
     return true;
 }
 
-void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
-    m_score = score;
+void ProfilePopup::refreshUserInfoUI() {
     if (!Ref<ProfilePopup>(this)) return;
-    if (!m_usernameMenu || !m_statsMenu || !m_iconsMenu) return;
 
-    if (m_score) {
-        log::info("async user score received: username={}, stars={}, demons={}, creator points={}", m_score->m_userName, m_score->m_stars, m_score->m_demons, m_score->m_creatorPoints);
-        // TODO: refresh UI elements that depend on m_score here
-        auto usernameLabel = CCLabelBMFont::create(m_score->m_userName.c_str(), "bigFont.fnt");
-        usernameLabel->setScale(0.8f);
-        m_usernameMenu->addChild(usernameLabel);
+    if (!m_usernameMenu || !m_statsMenu || !m_iconsMenu || !m_refreshMenu || !m_userOptionsMenu || !m_onlineMenu || !m_otherOptionsMenu) return;
 
-        auto infoSpr = CCSpriteGrayscale::createWithSpriteFrameName("GJ_infoIcon_001.png");
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(ProfilePopup::onInfo));
-        m_buttonMenu->addChildAtPosition(infoBtn, Anchor::TopRight, {-5.f, -5.f}, {0.5f, 0.5f}, false);
+    m_usernameMenu->removeAllChildren();
+    m_statsMenu->removeAllChildren();
+    m_iconsMenu->removeAllChildren();
+    m_refreshMenu->removeAllChildren();
+    m_userOptionsMenu->removeAllChildren();
+    m_onlineMenu->removeAllChildren();
+    m_otherOptionsMenu->removeAllChildren();
 
+    if (m_buttonMenu) m_buttonMenu->removeAllChildren();
+    if (!m_score) {
         m_usernameMenu->updateLayout();
-
-        // stats
-        auto starsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_stars).c_str(), "bigFont.fnt");
-        starsLabel->setScale(0.4f);
-        starsLabel->setColor({233, 253, 113});
-        m_statsMenu->addChild(starsLabel);
-
-        auto starsIcon = Button::createWithSpriteFrameName("GJ_starsIcon_001.png", [this](auto btn) {
-            StarInfoPopup::createFromString(m_score->m_starsInfo)->show();
-        });
-        starsIcon->setScale(0.5f);
-        m_statsMenu->addChild(starsIcon);
-
-        // moons
-        auto moonLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_moons).c_str(), "bigFont.fnt");
-        moonLabel->setScale(0.4f);
-        moonLabel->setColor({109, 215, 249});
-        m_statsMenu->addChild(moonLabel);
-
-        auto moonIcon = Button::createWithSpriteFrameName("GJ_moonsIcon_001.png", [this](auto btn) {
-            StarInfoPopup::createFromStringMoons(m_score->m_platformerInfo)->show();
-        });
-        moonIcon->setScale(0.5f);
-        m_statsMenu->addChild(moonIcon);
-
-        // demons
-        auto demonLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_demons).c_str(), "bigFont.fnt");
-        demonLabel->setScale(0.4f);
-        demonLabel->setColor({240, 140, 140});
-        m_statsMenu->addChild(demonLabel);
-
-        auto demonIcon = Button::createWithSpriteFrameName("GJ_demonIcon_001.png", [this](auto btn) {
-            DemonInfoPopup::createFromString(m_score->m_demonInfo)->show();
-        });
-        demonIcon->setScale(0.5f);
-        m_statsMenu->addChild(demonIcon);
-
-        // creator points
-        if (m_score->m_creatorPoints > 0) {
-            auto cpLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_creatorPoints).c_str(), "bigFont.fnt");
-            cpLabel->setScale(0.4f);
-            cpLabel->setColor({182, 186, 186});
-            m_statsMenu->addChild(cpLabel);
-
-            auto cpIcon = CCSprite::createWithSpriteFrameName("GJ_hammerIcon_001.png");
-            cpIcon->setScale(0.5f);
-            m_statsMenu->addChild(cpIcon);
-        }
-
-        // user coints
-        auto userCoinsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_userCoins).c_str(), "bigFont.fnt");
-        userCoinsLabel->setScale(0.4f);
-        userCoinsLabel->setColor({255, 255, 255});
-        m_statsMenu->addChild(userCoinsLabel);
-
-        auto userCoinsIcon = CCSprite::createWithSpriteFrameName("GJ_coinsIcon2_001.png");
-        userCoinsIcon->setScale(0.5f);
-        m_statsMenu->addChild(userCoinsIcon);
-
-        // secret coins
-        auto secretCoinsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_secretCoins).c_str(), "bigFont.fnt");
-        secretCoinsLabel->setScale(0.4f);
-        secretCoinsLabel->setColor({248, 138, 0});
-        m_statsMenu->addChild(secretCoinsLabel);
-
-        auto secretCoinsIcon = CCSprite::createWithSpriteFrameName("GJ_coinsIcon_001.png");
-        secretCoinsIcon->setScale(0.5f);
-        m_statsMenu->addChild(secretCoinsIcon);
-
         m_statsMenu->updateLayout();
-
-        // icons
-        auto playerObject = [&](IconType iconType, int playerType) {
-            auto wrapper = CCNode::create();
-            wrapper->setContentSize({35, 35});
-            wrapper->setAnchorPoint({0.5f, 0.5f});
-
-            auto player = cue::PlayerIcon::create(iconType, playerType, m_score->m_color1, m_score->m_color2, m_score->m_color3);
-            player->setAnchorPoint({0.5f, 0.5f});
-            player->setPosition({wrapper->getContentSize().width / 2.f, wrapper->getContentSize().height / 2.f});
-            wrapper->addChild(player);
-
-            if (iconType == IconType::Ufo) player->setPositionY(player->getPositionY() - 7);  // very hacky way to make the ufo aligned
-            return wrapper;
-        };
-
-        m_iconsMenu->addChild(playerObject(IconType::Cube, m_score->m_playerCube));
-        m_iconsMenu->addChild(playerObject(IconType::Ship, m_score->m_playerShip));
-        m_iconsMenu->addChild(playerObject(IconType::Ball, m_score->m_playerBall));
-        m_iconsMenu->addChild(playerObject(IconType::Ufo, m_score->m_playerUfo));
-        m_iconsMenu->addChild(playerObject(IconType::Wave, m_score->m_playerWave));
-        m_iconsMenu->addChild(playerObject(IconType::Robot, m_score->m_playerRobot));
-        m_iconsMenu->addChild(playerObject(IconType::Spider, m_score->m_playerSpider));
-        m_iconsMenu->addChild(playerObject(IconType::Swing, m_score->m_playerSwing));
-        m_iconsMenu->addChild(playerObject(IconType::Jetpack, m_score->m_playerJetpack));
-
         m_iconsMenu->updateLayout();
-
-        // top right menu
-        auto oldProfileBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("PO-icon-person.png"_spr), [this](geode::Button* sender) {
-            onClose(sender);
-            profile::onVanillaProfilePage = true;
-            ProfilePage::create(m_score->m_accountID, m_ownProfile)->show();
-        });
-        m_refreshMenu->addChild(oldProfileBtn);
         m_refreshMenu->updateLayout();
+        m_userOptionsMenu->updateLayout();
+        m_onlineMenu->updateLayout();
+        m_otherOptionsMenu->updateLayout();
+        return;
+    }
 
-        // left panel
-        if (m_ownProfile) {
-            auto accountSettingsBtn = Button::createWithSpriteFrameName("accountBtn_settings_001.png", [this](geode::Button* sender) {
-                GJAccountSettingsLayer::create(m_score->m_accountID)->show();
-            });
-            m_userOptionsMenu->addChild(accountSettingsBtn);
+    log::info("refresh user score UI: username={}, stars={}, demons={}, creator points={}", m_score->m_userName, m_score->m_stars, m_score->m_demons, m_score->m_creatorPoints);
 
-            auto friendRequestsBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
-                FRequestProfilePage::create(false)->show();
-            });
-            m_userOptionsMenu->addChild(friendRequestsBtn);
+    auto usernameLabel = CCLabelBMFont::create(m_score->m_userName.c_str(), "bigFont.fnt");
+    usernameLabel->setScale(0.8f);
+    m_usernameMenu->addChild(usernameLabel);
 
-            auto friendListBtn = Button::createWithSpriteFrameName("accountBtn_friends_001.png", [this](geode::Button* sender) {
-                FriendsProfilePage::create(UserListType::Friends)->show();
-            });
-            m_userOptionsMenu->addChild(friendListBtn);
+    auto infoSpr = CCSpriteGrayscale::createWithSpriteFrameName("GJ_infoIcon_001.png");
+    auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(ProfilePopup::onInfo));
+    if (m_buttonMenu) m_buttonMenu->addChildAtPosition(infoBtn, Anchor::TopRight, {-5.f, -5.f}, {0.5f, 0.5f}, false);
 
-            // @geode-ignore(unknown-resource)
-            auto shareCommentBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/message.png"), [this](geode::Button* sender) {
-                if (m_score) {
-                    if (auto layer = ShareCommentLayer::create("Post Account Update", 140, CommentType::Account, m_score->m_accountID, "")) {
-                        layer->m_delegate = this;
-                        layer->show();
-                    }
-                }
-            });
-            m_userOptionsMenu->addChild(shareCommentBtn);
+    m_usernameMenu->updateLayout();
+
+    auto starsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_stars).c_str(), "bigFont.fnt");
+    starsLabel->setScale(0.4f);
+    starsLabel->setColor({233, 253, 113});
+    m_statsMenu->addChild(starsLabel);
+
+    auto starsIcon = Button::createWithSpriteFrameName("GJ_starsIcon_001.png", [this](auto btn) {
+        StarInfoPopup::createFromString(m_score->m_starsInfo)->show();
+    });
+    starsIcon->setScale(0.5f);
+    m_statsMenu->addChild(starsIcon);
+
+    auto moonLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_moons).c_str(), "bigFont.fnt");
+    moonLabel->setScale(0.4f);
+    moonLabel->setColor({109, 215, 249});
+    m_statsMenu->addChild(moonLabel);
+
+    auto moonIcon = Button::createWithSpriteFrameName("GJ_moonsIcon_001.png", [this](auto btn) {
+        StarInfoPopup::createFromStringMoons(m_score->m_platformerInfo)->show();
+    });
+    moonIcon->setScale(0.5f);
+    m_statsMenu->addChild(moonIcon);
+
+    auto demonLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_demons).c_str(), "bigFont.fnt");
+    demonLabel->setScale(0.4f);
+    demonLabel->setColor({240, 140, 140});
+    m_statsMenu->addChild(demonLabel);
+
+    auto demonIcon = Button::createWithSpriteFrameName("GJ_demonIcon_001.png", [this](auto btn) {
+        DemonInfoPopup::createFromString(m_score->m_demonInfo)->show();
+    });
+    demonIcon->setScale(0.5f);
+    m_statsMenu->addChild(demonIcon);
+
+    if (m_score->m_creatorPoints > 0) {
+        auto cpLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_creatorPoints).c_str(), "bigFont.fnt");
+        cpLabel->setScale(0.4f);
+        cpLabel->setColor({182, 186, 186});
+        m_statsMenu->addChild(cpLabel);
+
+        auto cpIcon = CCSprite::createWithSpriteFrameName("GJ_hammerIcon_001.png");
+        cpIcon->setScale(0.5f);
+        m_statsMenu->addChild(cpIcon);
+    }
+
+    auto userCoinsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_userCoins).c_str(), "bigFont.fnt");
+    userCoinsLabel->setScale(0.4f);
+    userCoinsLabel->setColor({255, 255, 255});
+    m_statsMenu->addChild(userCoinsLabel);
+
+    auto userCoinsIcon = CCSprite::createWithSpriteFrameName("GJ_coinsIcon2_001.png");
+    userCoinsIcon->setScale(0.5f);
+    m_statsMenu->addChild(userCoinsIcon);
+
+    auto secretCoinsLabel = CCLabelBMFont::create(GameToolbox::pointsToString(m_score->m_secretCoins).c_str(), "bigFont.fnt");
+    secretCoinsLabel->setScale(0.4f);
+    secretCoinsLabel->setColor({248, 138, 0});
+    m_statsMenu->addChild(secretCoinsLabel);
+
+    auto secretCoinsIcon = CCSprite::createWithSpriteFrameName("GJ_coinsIcon_001.png");
+    secretCoinsIcon->setScale(0.5f);
+    m_statsMenu->addChild(secretCoinsIcon);
+
+    m_statsMenu->updateLayout();
+
+    auto playerObject = [&](IconType iconType, int playerType) {
+        auto wrapper = CCNode::create();
+        wrapper->setContentSize({35, 35});
+        wrapper->setAnchorPoint({0.5f, 0.5f});
+
+        auto player = cue::PlayerIcon::create(iconType, playerType, m_score->m_color1, m_score->m_color2, m_score->m_color3);
+        player->setAnchorPoint({0.5f, 0.5f});
+        player->setPosition({wrapper->getContentSize().width / 2.f, wrapper->getContentSize().height / 2.f});
+        wrapper->addChild(player);
+
+        if (iconType == IconType::Ufo) {
+            player->setPositionY(player->getPositionY() - 7);
         }
+        return wrapper;
+    };
+
+    m_iconsMenu->addChild(playerObject(IconType::Cube, m_score->m_playerCube));
+    m_iconsMenu->addChild(playerObject(IconType::Ship, m_score->m_playerShip));
+    m_iconsMenu->addChild(playerObject(IconType::Ball, m_score->m_playerBall));
+    m_iconsMenu->addChild(playerObject(IconType::Ufo, m_score->m_playerUfo));
+    m_iconsMenu->addChild(playerObject(IconType::Wave, m_score->m_playerWave));
+    m_iconsMenu->addChild(playerObject(IconType::Robot, m_score->m_playerRobot));
+    m_iconsMenu->addChild(playerObject(IconType::Spider, m_score->m_playerSpider));
+    m_iconsMenu->addChild(playerObject(IconType::Swing, m_score->m_playerSwing));
+    m_iconsMenu->addChild(playerObject(IconType::Jetpack, m_score->m_playerJetpack));
+
+    m_iconsMenu->updateLayout();
+
+    auto oldProfileBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("PO-icon-person.png"_spr), [this](geode::Button* sender) {
+        onClose(sender);
+        profile::onVanillaProfilePage = true;
+        ProfilePage::create(m_score->m_accountID, m_ownProfile)->show();
+    });
+    m_refreshMenu->addChild(oldProfileBtn);
+    m_refreshMenu->updateLayout();
+
+    if (m_score->isCurrentUser()) {
+        auto accountSettingsBtn = Button::createWithSpriteFrameName("accountBtn_settings_001.png", [this](geode::Button* sender) {
+            GJAccountSettingsLayer::create(m_score->m_accountID)->show();
+        });
+        m_userOptionsMenu->addChild(accountSettingsBtn);
+
+        auto friendListBtn = Button::createWithSpriteFrameName("accountBtn_friends_001.png", [this](geode::Button* sender) {
+            FriendsProfilePage::create(UserListType::Friends)->show();
+        });
+        m_userOptionsMenu->addChild(friendListBtn);
+
+        auto friendRequestsBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
+            FRequestProfilePage::create(false)->show();
+        });
+        m_userOptionsMenu->addChild(friendRequestsBtn);
 
         auto messageBtn = Button::createWithSpriteFrameName("accountBtn_messages_001.png", [this](geode::Button* sender) {
             if (m_score) {
@@ -387,114 +394,162 @@ void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
         });
         m_userOptionsMenu->addChild(messageBtn);
 
-        // block user
-        if (!m_score->isCurrentUser()) {
-            auto blockBtn = Button::createWithSpriteFrameName("accountBtn_blocked_001.png", [this](geode::Button* sender) {
-                if (m_score) {
-                    createQuickPopup(
-                        "Block user",
-                        fmt::format("Are you sure you want to block <cg>{}</c>?\n"
-                                    "<cg>{}</c> will no longer be able to:\n"
-                                    "- <cy>View your profile</c>\n"
-                                    "- <cl>Send messages</c>\n"
-                                    "- <cp>Send friend requests</c>\n"
-                                    "- <cr>Messages from this user will be removed</c>",
-                            m_score->m_userName,
-                            m_score->m_userName),
-                        "Back",
-                        "Block",
-                        [this](auto layer, auto block) {
-                            if (block) {
-                                auto upopup = UploadActionPopup::create(nullptr, "Blocking user...");
-                                if (GameLevelManager::get()->blockUser(m_score->m_accountID)) {
-                                    upopup->showSuccessMessage("User blocked!");
-                                } else {
-                                    upopup->showFailMessage("Failed to block user");
-                                }
-                            }
-                        });
+        auto shareCommentBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/message.png"), [this](geode::Button* sender) {
+            if (m_score) {
+                if (auto layer = ShareCommentLayer::create("Post Account Update", 140, CommentType::Account, m_score->m_accountID, "")) {
+                    layer->m_delegate = this;
+                    layer->show();
                 }
-            });
-            m_userOptionsMenu->addChild(blockBtn);
-        }
-
-        // log::debug("friend status for account {} is {}", m_score->m_accountID, m_score->m_friendStatus);             // 0 = All, 1 = None
-        // log::debug("friend request status for account {} is {}", m_score->m_accountID, m_score->m_friendReqStatus);  // 0 = Unfriended, 1 = Friended, 3 = Friend request sent to the player, 4 = Friend request received from the player
-
-        // friend logic
-        if (m_score->m_friendReqStatus == 0 && !m_score->isCurrentUser() && m_score->m_friendStatus == 0) {
-            auto addFriendBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
-                if (m_score) {
-                    if (auto layer = ShareCommentLayer::create("Friend Request", 140, CommentType::FriendRequest, m_score->m_accountID, "")) {
-                        layer->show();
-                    }
-                }
-            });
-            m_userOptionsMenu->addChild(addFriendBtn);
-        }
-
-        if (m_score->m_friendStatus == 1 && !m_score->isCurrentUser() && m_score->m_friendReqStatus == 0) {  // already friends
-            auto friendBtn = Button::createWithSpriteFrameName("accountBtn_removeFriend_001.png", [this](geode::Button* sender) {
-                if (m_score) {
-                    createQuickPopup(
-                        "Unfriend",
-                        fmt::format("Are you sure you want to unfriend <cg>{}</c>?", m_score->m_userName),
-                        "Back",
-                        "Unfriend",
-                        [this](auto layer, auto unfriend) {
-                            if (unfriend) {
-                                auto upopup = UploadActionPopup::create(nullptr, "Removing friend...");
-                                if (GameLevelManager::get()->removeFriend(m_score->m_accountID)) {
-                                    upopup->showSuccessMessage("Friend removed!");
-                                } else {
-                                    upopup->showFailMessage("Failed to remove friend");
-                                }
-                            }
-                        });
-                }
-            });
-            m_userOptionsMenu->addChild(friendBtn);
-        }
-
-        if (m_score->m_friendReqStatus == 3 && !m_score->isCurrentUser() && m_score->m_friendStatus == 0) {  // pending friend request sent
-            auto cancelFriendBtn = Button::createWithSpriteFrameName("accountBtn_pendingRequest_001.png", [this](geode::Button* sender) {
-                if (m_score) {
-                    GJFriendRequest* friendObj = GameLevelManager::get()->friendRequestFromAccountID(m_score->m_accountID);
-                    if (friendObj) FriendRequestPopup::create(friendObj)->show();
-                }
-            });
-            m_userOptionsMenu->addChild(cancelFriendBtn);
-        }
-
-        if (m_score->m_friendReqStatus == 4 && !m_score->isCurrentUser() && m_score->m_friendStatus == 0) {  // pending friend request received
-            auto acceptFriendBtn = Button::createWithSpriteFrameName("accountBtn_pending_001.png", [this](geode::Button* sender) {
-                if (m_score) {
-                    createQuickPopup(
-                        "Cancel friend request",
-                        "Are you sure you want to cancel this friend request?",
-                        "Back",
-                        "Remove",
-                        [this](auto layer, auto remove) {
-                            if (remove) {
-                                auto glm = GameLevelManager::get();
-                                if (glm) {
-                                    auto upopup = UploadActionPopup::create(nullptr, "Removing friend request...");
-                                    upopup->show();
-                                    if (glm->deleteSentFriendRequest(m_score->m_accountID)) {
-                                        upopup->showSuccessMessage("Request removed");
-                                    } else {
-                                        upopup->showFailMessage("Failed to remove friend request");
-                                    }
-                                }
-                            }
-                        });
-                }
-            });
-            m_userOptionsMenu->addChild(acceptFriendBtn);
-        }
-
-        m_userOptionsMenu->updateLayout();
+            }
+        });
+        m_userOptionsMenu->addChild(shareCommentBtn);
     }
+
+    if (!m_score->isCurrentUser()) {
+        auto blockBtn = Button::createWithSpriteFrameName("accountBtn_blocked_001.png", [this](geode::Button* sender) {
+            if (m_score) {
+                createQuickPopup(
+                    "Block user",
+                    fmt::format("Are you sure you want to block <cg>{}</c>?\n"
+                                "<cg>{}</c> will no longer be able to:\n"
+                                "- <cy>View your profile</c>\n"
+                                "- <cl>Send messages</c>\n"
+                                "- <cp>Send friend requests</c>\n"
+                                "- <cr>Messages from this user will be removed</c>",
+                        m_score->m_userName,
+                        m_score->m_userName),
+                    "Back",
+                    "Block",
+                    [this](auto layer, auto block) {
+                        if (block) {
+                            auto upopup = UploadActionPopup::create(nullptr, "Blocking user...");
+                            if (GameLevelManager::get()->blockUser(m_score->m_accountID)) {
+                                upopup->showSuccessMessage("User blocked!");
+                            } else {
+                                upopup->showFailMessage("Failed to block user");
+                            }
+                        }
+                    });
+            }
+        });
+        m_userOptionsMenu->addChild(blockBtn);
+    }
+
+    log::debug("friend status for account {} is {}", m_score->m_accountID, m_score->m_friendStatus);             // 0 = All, 1 = None
+    log::debug("friend request status for account {} is {}", m_score->m_accountID, m_score->m_friendReqStatus);  // 0 = Unfriended, 1 = Friended, 3 = Friend request sent to the player, 4 = Friend request received from the player
+
+    if (m_score->m_friendReqStatus == 0 && !m_score->isCurrentUser() && m_score->m_friendStatus == 0) {
+        auto addFriendBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
+            if (m_score) {
+                if (auto layer = ShareCommentLayer::create("Friend Request", 140, CommentType::FriendRequest, m_score->m_accountID, "")) {
+                    layer->show();
+                }
+            }
+        });
+        m_userOptionsMenu->addChild(addFriendBtn);
+    }
+
+    if (m_score->m_friendReqStatus == 1 && !m_score->isCurrentUser()) {
+        auto friendBtn = Button::createWithSpriteFrameName("accountBtn_removeFriend_001.png", [this](geode::Button* sender) {
+            if (m_score) {
+                createQuickPopup(
+                    "Unfriend",
+                    fmt::format("Are you sure you want to unfriend <cg>{}</c>?", m_score->m_userName),
+                    "Back",
+                    "Unfriend",
+                    [this](auto layer, auto unfriend) {
+                        if (unfriend) {
+                            auto upopup = UploadActionPopup::create(nullptr, "Removing friend...");
+                            if (GameLevelManager::get()->removeFriend(m_score->m_accountID)) {
+                                upopup->showSuccessMessage("Friend removed!");
+                            } else {
+                                upopup->showFailMessage("Failed to remove friend");
+                            }
+                        }
+                    });
+            }
+        });
+        m_userOptionsMenu->addChild(friendBtn);
+    }
+
+    if (m_score->m_friendReqStatus == 3 && !m_score->isCurrentUser() && m_score->m_friendStatus == 0) {
+        auto cancelFriendBtn = Button::createWithSpriteFrameName("accountBtn_pendingRequest_001.png", [this](geode::Button* sender) {
+            if (m_score) {
+                GJFriendRequest* friendObj = GameLevelManager::get()->friendRequestFromAccountID(m_score->m_accountID);
+                if (friendObj) FriendRequestPopup::create(friendObj)->show();
+            }
+        });
+        m_userOptionsMenu->addChild(cancelFriendBtn);
+    }
+
+    if (m_score->m_friendReqStatus == 4 && !m_score->isCurrentUser() && m_score->m_friendStatus == 0) {
+        auto acceptFriendBtn = Button::createWithSpriteFrameName("accountBtn_pending_001.png", [this](geode::Button* sender) {
+            if (m_score) {
+                createQuickPopup(
+                    "Cancel friend request",
+                    "Are you sure you want to cancel this friend request?",
+                    "Back",
+                    "Remove",
+                    [this](auto layer, auto remove) {
+                        if (remove) {
+                            auto glm = GameLevelManager::get();
+                            if (glm) {
+                                auto upopup = UploadActionPopup::create(nullptr, "Removing friend request...");
+                                upopup->show();
+                                if (glm->deleteSentFriendRequest(m_score->m_accountID)) {
+                                    upopup->showSuccessMessage("Request removed");
+                                } else {
+                                    upopup->showFailMessage("Failed to remove friend request");
+                                }
+                            }
+                        }
+                    });
+            }
+        });
+        m_userOptionsMenu->addChild(acceptFriendBtn);
+    }
+
+    m_userOptionsMenu->updateLayout();
+
+    // bottom left menu
+    if ((m_score->m_commentHistoryStatus == 0) || (m_score->m_commentHistoryStatus == 1 && m_score->m_friendReqStatus == 1)) {
+        auto commentHistoryBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("particle_206_001.png"), [this](geode::Button* sender) {
+            if (m_score) {
+                onCommentHistory(sender);
+            }
+        });
+        m_otherOptionsMenu->addChild(commentHistoryBtn);
+        m_otherOptionsMenu->updateLayout();
+    }
+
+    if (!m_score->isCurrentUser()) {
+        auto glm = GameLevelManager::get();
+        bool isFollowing = glm ? glm->isFollowingUser(m_score->m_accountID) : false;
+        auto followSprite = isFollowing ? AccountButtonSprite::createWithSpriteFrameName("gj_heartOn_001.png", 1.f, AccountBaseColor::Blue) : AccountButtonSprite::createWithSpriteFrameName("gj_heartOff_001.png", 1.f, AccountBaseColor::Gray);
+        auto followUserBtn = Button::createWithNode(followSprite, [this](geode::Button* sender) {
+            onFollowUser(sender);
+        });
+        m_otherOptionsMenu->addChild(followUserBtn);
+        m_otherOptionsMenu->updateLayout();
+    }
+
+    // bottom right menu
+    auto listAccountBtn = Button::createWithSpriteFrameName("accountBtn_myLists_001.png", [this](geode::Button* sender) {
+        onList(sender);
+    });
+    m_onlineMenu->addChild(listAccountBtn);
+
+    auto myLevelBtn = Button::createWithSpriteFrameName("accountBtn_myLevels_001.png", [this](geode::Button* sender) {
+        onLevel(sender);
+    });
+    m_onlineMenu->addChild(myLevelBtn);
+
+    m_onlineMenu->updateLayout();
+}
+
+void ProfilePopup::getUserInfoFinished(GJUserScore* score) {
+    m_score = score;
+    refreshUserInfoUI();
 }
 
 // profile page own implemetation
@@ -610,9 +665,57 @@ void ProfilePopup::shareCommentClosed(gd::string text, ShareCommentLayer* layer)
 }
 
 void ProfilePopup::userInfoChanged(GJUserScore* score) {
-    if (score && m_score && score == m_score) {
-        m_score = score;
-        log::info("user score changed for account id {}", m_score->m_accountID);
-        // TODO: refresh UI elements if needed
+    if (!score) {
+        return;
     }
+    if (score != m_score && score->m_accountID != m_accountId) {
+        return;
+    }
+
+    m_score = score;
+    log::info("user score changed for account id {}", m_score->m_accountID);
+    refreshUserInfoUI();
+}
+
+void ProfilePopup::onList(CCObject* sender) {
+    if (!m_score) return;
+    GJSearchObject* searchObj = GJSearchObject::create(SearchType::UsersLevels, numToString(m_score->m_accountID));
+    searchObj->m_searchMode = 1;  // 1 = lists, 0 = levels
+    auto scene = CCScene::create();
+    auto levelLayer = LevelBrowserLayer::create(searchObj);
+    scene->addChild(levelLayer);
+    CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
+}
+
+void ProfilePopup::onLevel(CCObject* sender) {
+    if (!m_score) return;
+    GJSearchObject* searchObj = GJSearchObject::create(SearchType::UsersLevels, numToString(m_score->m_userID));
+    auto scene = CCScene::create();
+    auto levelLayer = LevelBrowserLayer::create(searchObj);
+    scene->addChild(levelLayer);
+    CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
+}
+
+void ProfilePopup::onCommentHistory(CCObject* sender) {
+    if (!m_score) return;
+    // show the user comment history
+    InfoLayer::create(nullptr, m_score, nullptr)->show();
+}
+
+void ProfilePopup::onFollowUser(CCObject* sender) {
+    if (!m_score) return;
+    if (m_score->isCurrentUser()) {
+        log::error("cannot follow/unfollow yourself");
+        return;
+    }
+    auto glm = GameLevelManager::get();
+    if (!glm) return;
+    // follow/unfollow the user
+    if (glm->isFollowingUser(m_score->m_accountID)) {
+        glm->unfollowUser(m_score->m_accountID);
+    } else {
+        glm->followUser(m_score->m_accountID);
+    }
+
+    refreshUserInfoUI();
 }

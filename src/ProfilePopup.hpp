@@ -3,6 +3,7 @@
 #include <Geode/binding/ShareCommentLayer.hpp>
 #include <cue/ListBorder.hpp>
 #include <cue/ListNode.hpp>
+#include "Geode/cocos/cocoa/CCObject.h"
 
 using namespace geode::prelude;
 
@@ -51,6 +52,13 @@ private:
     int m_commentPageSize = 10;
 
     void requestAccountCommentsPage(int page);
+    void refreshUserInfoUI();
+
+    void onList(CCObject* sender);
+    void onLevel(CCObject* sender);
+
+    void onCommentHistory(CCObject* sender);
+    void onFollowUser(CCObject* sender);
 
 protected:
     void onInfo(CCObject* sender);
