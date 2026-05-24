@@ -368,19 +368,19 @@ void ProfilePopup::refreshUserInfoUI() {
         auto modBadge = Button::createWithSpriteFrameName("modBadge_01_001.png", [this](geode::Button* sender) {
             FLAlertLayer::create(
                 "Moderator",
-                "<cy>Moderator</c> can suggest levels to <cf>RobTop</c> for rating and hold higher priority when suggesting Demon difficulty ratings.\n"
+                "<cy>Moderators</c> can suggest levels to <cf>RobTop</c> for rating, <cr>copy and check any level in the editor</c> and hold higher priority when suggesting Demon difficulty ratings.\n"
                 "<cy>Moderator</c> comments are highlighted in <cg>light green</c>",
                 "OK")
                 ->show();
         });
         m_usernameMenu->addChild(modBadge);
-    } else if (m_score->m_modBadge == 2)  // super moderator
+    } else if (m_score->m_modBadge == 2)  // elder moderator
     {
         auto modBadge = Button::createWithSpriteFrameName("modBadge_02_001.png", [this](geode::Button* sender) {
             if (m_score->m_accountID == 71) {
                 FLAlertLayer::create(
                     "Developer",
-                    "<cf>Developer</c> holds <cg>all moderator abilities</c>.\n"
+                    "<cf>The Developer</c> holds <cg>all moderator abilities</c>.\n"
                     "<cf>Developer</c> comments are highlighted in <cf>cyan</c>, though the <cg>elder moderator badge remains visible</c>\n"
                     "<cy>This moderation status is only applied to RobTop.</c>",
                     "OK")
@@ -388,14 +388,14 @@ void ProfilePopup::refreshUserInfoUI() {
             } else {
                 FLAlertLayer::create(
                     "Elder Moderator",
-                    "<cg>Elder Moderators</c> hold all <co>moderator abilities</c>, with the additional ability to <cr>delete comments</c>, issue temporary <cr>comment bans</c>, remove <cy>unrated user levels</c> from the server, and <cc>whitelist scouted Newgrounds artists</c>.\n"
+                    "<cg>Elder Moderators</c> hold all <co>moderator abilities</c>, with the additional ability to <cr>delete comments</cr>, issue temporary <cr>comment bans</cr>, remove <cy>unrated user levels</cy> from the server, <cc>allow old rated levels to be updated</cc> and <cc>whitelist scouted Newgrounds artists</cc>.\n"
                     "<cg>Elder Moderator</c> comments are highlighted in <cg>dark green</c>",
                     "OK")
                     ->show();
             }
         });
         m_usernameMenu->addChild(modBadge);
-    } else if (m_score->m_modBadge == 3)  // trial moderator
+    } else if (m_score->m_modBadge == 3)  // leaderboard moderator
     {
         auto modBadge = Button::createWithSpriteFrameName("modBadge_03_001.png", [this](geode::Button* sender) {
             FLAlertLayer::create(
