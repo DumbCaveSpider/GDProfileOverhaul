@@ -1,3 +1,9 @@
+## v1.0.4
+- Updated to Geode v6.0.0
+- Fixed the logic for the friend request button to show up when the user has their friend request disabled
+- Fixed the logic for the comment history to show up when the user has their comment history disabled
+- 
+
 ## v1.0.3
 
 - Moved all of the profile-related functions to be inlined.

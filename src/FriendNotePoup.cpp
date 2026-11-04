@@ -3,15 +3,14 @@
 #include <Geode/ui/Button.hpp>
 #include <Geode/utils/file.hpp>
 #include <matjson.hpp>
-#include <filesystem>
+#include <asp/fs.hpp>
 #include "FriendNotePopup.hpp"
 #include "Geode/ui/General.hpp"
 
 using namespace geode::prelude;
 
-static std::filesystem::path getFriendNoteSaveFilePath() {
-    std::filesystem::path saveDir = geode::Mod::get()->getSaveDir();
-    return saveDir / "savedFriendNote.json";
+static asp::fs::Path getFriendNoteSaveFilePath() {
+    return geode::Mod::get()->getSaveDir() / "savedFriendNote.json";
 }
 
 std::pair<std::string, std::string> loadFriendNoteFromFile(int accountId) {
@@ -75,7 +74,8 @@ bool FriendNotePopup::init(ProfilePopup* profilePopup, GJUserScore* score) {
 
     m_noElasticity = true;
 
-    if (m_buttonMenu) m_buttonMenu->removeAllChildren();
+    m_closeBtn->removeFromParent();
+    m_closeBtn = nullptr;
 
     std::string title = std::string("Friend Note - ") + score->m_userName.c_str();
     setTitle(title);

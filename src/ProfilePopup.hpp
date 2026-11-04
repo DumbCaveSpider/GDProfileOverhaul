@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/binding/ShareCommentDelegate.hpp>
 #include <Geode/binding/ShareCommentLayer.hpp>
@@ -29,7 +30,12 @@ public:
     void loadLeaderboardFailed(char const* key) override;
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key) override;
     void loadLevelsFailed(char const* key) override;
-    void shareCommentClosed(gd::string text, ShareCommentLayer* layer) override;
+    void setupPageInfo(std::string info, char const* key) override;
+    void commentUploadFinished(int parentID) override;
+    void commentUploadFailed(int parentID, CommentError errorType) override;
+    void uploadActionFinished(int id, int response) override;
+    void uploadActionFailed(int id, int response) override;
+    void onClosePopup(UploadActionPopup* popup) override;
 
 private:
     GJUserScore* m_score;
@@ -50,7 +56,8 @@ private:
 
     // comments UI
     LoadingSpinner* m_commentsSpinner = nullptr;
-    CCLabelBMFont* m_noCommentsLabel = nullptr;
+    geode::Label* m_statusLabel = nullptr;
+    bool m_commentsHiddenByBlock = false;
 
     // leaderboard menu
     CCMenu* m_leaderboardMenu;
@@ -63,11 +70,11 @@ private:
     // level cell
     LoadingSpinner* m_spinner = nullptr;
     LevelCell* m_levelCell = nullptr;
-    CCLabelBMFont* m_noneLabel = nullptr;
+    geode::Label* m_noneLabel = nullptr;
     int m_ratedLevelPage = 0;
     bool m_ratedLevelFetchCompleted = false;
     bool m_ratedLevelFetchFailed = false;
-    gd::string m_ratedLevelSearchKey;
+    std::string m_ratedLevelSearchKey;
 
     // leaderboard state
     int m_moonsRank = 0;
@@ -77,15 +84,23 @@ private:
     int m_accountId;
     bool m_ownProfile;
     int m_commentPage = 0;
-    int m_commentPageSize = 10;
+    int m_commentItemCount = 0;
+    int m_commentPageStart = 0;
+    int m_commentPageEnd = 0;
+    std::string m_commentKey;
     bool m_refreshScheduled = false;
-    int m_commentRequestId = 0;
+    UploadActionPopup* m_uploadPopup = nullptr;
 
-    void requestAccountCommentsPage(int page);
+    void loadCommentPage(int page);
+    void clearCommentsStatus();
+    void showCommentsSpinner();
+    void showCommentsStatus();
     void refreshRatedLevelCell();
     void showNoRatedLevelLabel(bool showLatestLevel);
     void refreshComments();
     void requestMoonLeaderboardRank();
+    void prepareUploadAction();
+    void showUploadPopup(char const* text);
 
     void showGradientBackground(ccColor3B startColor, ccColor3B endColor);
     Ref<CCLayerGradient> m_gradient = nullptr;
