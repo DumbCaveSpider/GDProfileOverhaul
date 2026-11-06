@@ -172,15 +172,20 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_closeMenu->updateLayout();
 
     m_userOptionsMenu = CCMenu::create();
-    m_userOptionsMenu->setContentSize({35, 135});
+    m_userOptionsMenu->setContentSize({50, 180});
     m_userOptionsMenu->setID("user-options-menu");
     m_userOptionsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_userOptionsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true));
+    m_userOptionsMenu->setLayout(ColumnLayout::create()
+            ->setCrossAxisOverflow(false)
+            ->setAxisReverse(true)
+            ->setGrowCrossAxis(true)
+            ->setGap(0.f));
     m_userOptionsMenu->setZOrder(1);
+    m_userOptionsMenu->setScale(0.75f);
     m_mainLayer->addChildAtPosition(m_userOptionsMenu, Anchor::Left, {30.f, 19.f}, {0.5, 0.5}, false);
 
     auto userOptionsMenuBg = NineSlice::create("square02_small.png");
-    userOptionsMenuBg->setContentSize(m_userOptionsMenu->getContentSize() + CCSize{5, 5});
+    userOptionsMenuBg->setContentSize(m_userOptionsMenu->getContentSize() - CCSize{10, 40});
     userOptionsMenuBg->setOpacity(100);
     m_mainLayer->addChildAtPosition(userOptionsMenuBg, Anchor::Left, {30.f, 19.f}, {0.5, 0.5}, false);
 
@@ -595,6 +600,11 @@ void ProfilePopup::refreshUserInfoUI() {
             m_userOptionsMenu->addChild(accountSettingsBtn);
         }
 
+        auto notificationBtn = Button::createWithSpriteFrameName("accountBtn_notifications_001.png", [this](geode::Button* sender) {
+            //NotificationsPage::create()->show();
+        });
+        m_userOptionsMenu->addChild(notificationBtn);
+
         auto friendListBtn = Button::createWithSpriteFrameName("accountBtn_friends_001.png", [this](geode::Button* sender) {
             FriendsProfilePage::create(UserListType::Friends)->show();
         });
@@ -833,7 +843,7 @@ void ProfilePopup::refreshUserInfoUI() {
 
     if (Mod::get()->getSettingValue<bool>("showModSettingsButton")) {
         // @geode-ignore(unknown-resource)
-        auto modSettingsBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/settings.png", 1.f, AccountBaseColor::Purple), [this](geode::Button* sender) {
+        auto modSettingsBtn = Button::createWithNode(AccountButtonSprite::createWithSpriteFrameName("geode.loader/settings.png", 1.2f, AccountBaseColor::Purple), [this](geode::Button* sender) {
             openSettingsPopup(getMod());
         });
         modSettingsBtn->setScale(0.6f);
