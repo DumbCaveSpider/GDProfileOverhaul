@@ -26,14 +26,14 @@
 using namespace geode::prelude;
 
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(MenuLayer) {
     void onMyProfile(CCObject*) {
         ProfilePopup::create(GJAccountManager::get()->m_accountID, true)->show();
     }
 };
-#endif
-#if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID)
+//#endif
+//#if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID)
 class $modify(MessageThreadsPage) {
     void onClose(CCObject* sender) {
         profile::suppressProfilePageReopen = !profile::onVanillaProfilePage;
@@ -41,10 +41,10 @@ class $modify(MessageThreadsPage) {
         profile::suppressProfilePageReopen = false;
     }
 };
-#endif
+//#endif
 
 // temp no address outside Android in the 2.2091 bindings
-#if defined(GEODE_IS_ANDROID)
+//#if defined(GEODE_IS_ANDROID)
 class $modify(FRequestProfilePage) {
     void onClose(CCObject* sender) {
         profile::suppressProfilePageReopen = !profile::onVanillaProfilePage && m_sent == false;
@@ -52,18 +52,18 @@ class $modify(FRequestProfilePage) {
         profile::suppressProfilePageReopen = false;
     }
 };
-#endif
+//#endif
 
 class $modify(FriendsProfilePage) {
-#if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID)
+//#if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID)
     void onClose(CCObject* sender) {
         profile::suppressProfilePageReopen = !profile::onVanillaProfilePage && m_type == UserListType::Friends;
         FriendsProfilePage::onClose(sender);
         profile::suppressProfilePageReopen = false;
     }
-#endif
+//#endif
 
-#if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID)
+//#if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID)
     // friend list rows are virtual in 2.2091, the row's button holds the score as its user object
     void onViewProfile(CCObject* sender) {
         auto node = typeinfo_cast<CCNode*>(sender);
@@ -74,7 +74,7 @@ class $modify(FriendsProfilePage) {
         }
         ProfilePopup::create(score->m_accountID, false)->show();
     }
-#endif
+//#endif
 };
 
 
@@ -124,89 +124,87 @@ class $modify(ProfilePage) {
     }
 };
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(LevelCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(this->m_level->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-// on Windows this should be the same function as GJLevelScoreCell::onViewProfile, which is hooked below
-#if defined(GEODE_IS_INTEL_MAC) || defined(GEODE_IS_ANDROID)
+//#if defined(GEODE_IS_INTEL_MAC) || defined(GEODE_IS_ANDROID)
 class $modify(GJRequestCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_score->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(GJScoreCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_score->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(LevelInfoLayer) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_level->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(LevelListLayer) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_levelList->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(LevelListCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_levelList->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(CommentCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_comment->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(GJMessageCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_message->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(GJLevelScoreCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_userScore->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-// on Windows this is the same function as GJLevelScoreCell::onViewProfile, which is hooked below
-#if defined(GEODE_IS_ANDROID)
+//#if defined(GEODE_IS_ANDROID)
 class $modify(GJCompactUserCell) {
     void onViewProfile(CCObject* sender) {
         ProfilePopup::create(m_userScore->m_accountID, false)->show();
     }
 };
-#endif
+//#endif
 
-#if !defined(GEODE_IS_IOS)
+//#if !defined(GEODE_IS_IOS)
 class $modify(InfoLayer) {
     void onMore(CCObject* sender) {
         if (m_level) ProfilePopup::create(m_level->m_accountID, false)->show();
@@ -214,4 +212,4 @@ class $modify(InfoLayer) {
         if (m_score) ProfilePopup::create(m_score->m_accountID, false)->show();
     }
 };
-#endif
+//#endif

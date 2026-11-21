@@ -297,7 +297,7 @@ bool ProfilePopup::init(int accountId, bool ownProfile) {
     m_socialsMenu->setContentSize({35, 135});
     m_socialsMenu->setID("socials-menu");
     m_socialsMenu->m_bIgnoreAnchorPointForPosition = false;
-    m_socialsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true));
+    m_socialsMenu->setLayout(ColumnLayout::create()->setCrossAxisOverflow(false)->setAxisReverse(true)->setGap(0.f));
     m_socialsMenu->setZOrder(1);
     m_mainLayer->addChildAtPosition(m_socialsMenu, Anchor::Right, {-30.f, 19.f}, {0.5, 0.5}, false);
 
@@ -625,7 +625,7 @@ void ProfilePopup::refreshUserInfoUI() {
 
         if (!noMessaging) {
             auto friendRequestsBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
-                //FRequestProfilePage::create(false)->show(); // not added in bindings yet
+                FRequestProfilePage::create(false)->show();
             });
             m_userOptionsMenu->addChild(friendRequestsBtn);
 
