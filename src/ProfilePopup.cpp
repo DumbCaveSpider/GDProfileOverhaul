@@ -617,8 +617,10 @@ void ProfilePopup::refreshUserInfoUI() {
             m_userOptionsMenu->addChild(accountSettingsBtn);
         }
 
-        auto notificationBtn = Button::createWithSpriteFrameName("accountBtn_notifications_001.png", [this](geode::Button* sender) {
+        auto graySprite = CCSpriteGrayscale::createWithSpriteFrameName("accountBtn_notifications_001.png");
+        auto notificationBtn = Button::createWithNode(graySprite, [this](geode::Button* sender) {
             //NotificationsPage::create()->show();
+            FLAlertLayer::create("Notifications Page", "Geode hasn't included <cy>Notification Page</c> on this platform yet.\nUse the <cg>vanilla profile page</c> to view this.", "OK")->show();
         });
         m_userOptionsMenu->addChild(notificationBtn);
 
@@ -641,8 +643,10 @@ void ProfilePopup::refreshUserInfoUI() {
         }
 
         if (!noMessaging) {
-            auto friendRequestsBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
+            auto graySprite1 = CCSpriteGrayscale::createWithSpriteFrameName("accountBtn_requests_001.png");
+            auto friendRequestsBtn = Button::createWithNode(graySprite1, [this](geode::Button* sender) {
                 //FRequestProfilePage::create(false)->show();
+                FLAlertLayer::create("Friend Request Profile Page", "Geode hasn't included <cy>Friend Request Profile Page</c> on this platform yet.\nUse the <cg>vanilla profile page</c> to view this.", "OK")->show();
             });
             m_userOptionsMenu->addChild(friendRequestsBtn);
 
