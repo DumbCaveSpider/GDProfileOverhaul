@@ -416,47 +416,64 @@ void ProfilePopup::refreshUserInfoUI() {
     usernameLabel->setScaleMultiplier(1.05f);
     m_usernameMenu->addChild(usernameLabel);
 
-    if (m_score->m_modBadge == 1)  // normal moderator
+    if (m_score->m_modBadge == 1)  // advisors
     {
         auto modBadge = Button::createWithSpriteFrameName("modBadge_01_001.png", [this](geode::Button* sender) {
             FLAlertLayer::create(
-                "Moderator",
-                "<cy>Moderator</c> can suggest levels to <cf>RobTop</c> for rating and hold higher priority when suggesting Demon difficulty ratings.\n"
-                "<cy>Moderator</c> comments are highlighted in <cg>light green</c>",
-                "OK")
+                nullptr,
+                "Rating Advisor",
+                "Advisors can <cy>suggest</c> levels for a rating, with a difficulty and a tier: <cg>Rate</c>, <cy>Feature</c>, <co>Epic</c>, <cp>Legendary</c> or <cl>Mythic</c>. Advisor votes also carry extra weight when deciding <cr>demon</c> difficulty.\n"
+                "<cl>--------------------</c>\n"
+                "<cy>Advisors cannot rate levels or moderate content.\n"
+                "All ratings are decided by RobTop.</c>",
+                "OK",
+                nullptr,
+                380.f)
                 ->show();
         });
         m_usernameMenu->addChild(modBadge);
-    } else if (m_score->m_modBadge == 2)  // super moderator
+    } else if (m_score->m_modBadge == 2)  // dev or moderator
     {
         auto modBadge = Button::createWithSpriteFrameName("modBadge_02_001.png", [this](geode::Button* sender) {
             if (m_score->m_accountID == 71) {
                 FLAlertLayer::create(
+                    nullptr,
                     "Developer",
                     "<cf>Developer</c> holds <cg>all moderator abilities</c>.\n"
                     "<cf>Developer</c> comments are highlighted in <cf>cyan</c>, though the <cg>elder moderator badge remains visible</c>\n"
                     "<cy>This moderation status is only applied to RobTop.</c>",
-                    "OK")
+                    "OK",
+                    nullptr,
+                    380.f)
                     ->show();
             } else {
                 FLAlertLayer::create(
-                    "Elder Moderator",
-                    "<cg>Elder Moderators</c> hold all <co>moderator abilities</c>, with the additional ability to <cr>delete comments</c>, issue temporary <cr>comment bans</c>, remove <cy>unrated user levels</c> from the server, and <cc>whitelist scouted Newgrounds artists</c>.\n"
-                    "<cg>Elder Moderator</c> comments are highlighted in <cg>dark green</c>",
-                    "OK")
+                    nullptr,
+                    "Moderator",
+                    "Moderators can suggest levels for a rating, respond to in-game <cy>reports</c>, <cy>delete comments</c>, <cy>ban players</c> from posting, delete or relist <cy>levels</c>, unlock levels for updating, and add <cy>Newgrounds</c> artists.\n"
+                    "<cl>--------------------</c>\n"
+                    "<cy>Moderators cannot rate levels.\n"
+                    "All ratings are decided by RobTop.</c>",
+                    "OK",
+                    nullptr,
+                    380.f)
                     ->show();
             }
         });
         m_usernameMenu->addChild(modBadge);
-    } else if (m_score->m_modBadge == 3)  // trial moderator
+    } else if (m_score->m_modBadge == 3)  // Leaderboard Moderator
     {
         auto modBadge = Button::createWithSpriteFrameName("modBadge_03_001.png", [this](geode::Button* sender) {
             FLAlertLayer::create(
+                nullptr,
                 "Leaderboard Moderator",
-                "<cl>Leaderboard Moderators</c> monitor <cg>global</c> and <co>level-specific</c> leaderboards for <cr>illegitimate submissions</c> and manage player <cg>whitelisting for the global Top 1,000</c>.\n"
-                "They hold a <cg>higher priority</c> when suggesting <cr>Demon difficulty ratings</c>.\n"
-                "<cy>The role was first assigned in Update 2.11 and formally included in Update 2.2.</c>",
-                "OK")
+                "Leaderboard Moderators review player <cy>stats</c> and remove invalid scores from the <cy>leaderboards</c>.\n"
+                "<cl>--------------------</c>\n"
+                "<cy>Leaderboard Moderators can only manage the leaderboards.\n"
+                "They cannot rate levels or moderate content.</c>",
+                "OK",
+                nullptr,
+                380.f)
                 ->show();
         });
         m_usernameMenu->addChild(modBadge);
@@ -625,7 +642,7 @@ void ProfilePopup::refreshUserInfoUI() {
 
         if (!noMessaging) {
             auto friendRequestsBtn = Button::createWithSpriteFrameName("accountBtn_requests_001.png", [this](geode::Button* sender) {
-                FRequestProfilePage::create(false)->show();
+                //FRequestProfilePage::create(false)->show();
             });
             m_userOptionsMenu->addChild(friendRequestsBtn);
 
