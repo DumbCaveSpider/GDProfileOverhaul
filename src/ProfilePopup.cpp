@@ -672,7 +672,7 @@ void ProfilePopup::refreshUserInfoUI() {
     if (!noMessaging && (m_score->isCurrentUser() || (!blocked && canMessageUser))) {
         auto messageBtn = Button::createWithSpriteFrameName("accountBtn_messages_001.png", [this](geode::Button* sender) {
             if (!m_score) return;
-#if defined(GEODE_IS_INTEL_MAC) || defined(GEODE_IS_IOS)
+#if defined(GEODE_IS_IOS)
             FLAlertLayer::create("Messages", "Opening messages from here isn't available on this platform yet.", "OK")->show();
 #else
             if (m_score->isCurrentUser()) {

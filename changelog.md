@@ -1,3 +1,7 @@
+## v1.0.5
+
+- Fixed crashes on launch on android because of a bindings error
+
 ## v1.0.4
 
 - Updated to Geode v6.0.0
@@ -14,7 +18,7 @@ _(Currently Notification and Friend Request isn't implemented on Geode, so the b
 - Moved the old UI button position
 - Fixed issue where on-going friend request button is hidden when the user has their friend request disabled.
 - Fixed issue where the comment history is hidden on your own profile when you have your comment history disabled.
-- Clicking on the Username on the Info Layer will now open the new profile page instead of the old one.
+- Clicking on the Username on the Info Layer will now open profile page instead of the old one.
 - Fixed the clipping issues on the level cell
 
 ## v1.0.2
